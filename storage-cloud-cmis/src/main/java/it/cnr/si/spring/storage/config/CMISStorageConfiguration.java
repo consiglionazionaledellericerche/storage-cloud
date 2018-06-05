@@ -74,17 +74,17 @@ public class CMISStorageConfiguration {
 
     @Bean
     public StorageService storageService() {
-        StorageService storageService = new StorageService() {
+        StorageService siglaStorageService = new StorageService() {
             private static final String ZIP_CONTENT = "service/zipper/zipContent";
-            private Session session;
-            private BindingSession bindingSession;
+            private Session siglaSession;
+            private BindingSession siglaBindingSession;
 
             @Override
             public void init() {
                 try {
-                    this.session = createSession();
+                    this.siglaSession = createSession();
                     createBindingSession();
-                } catch (CmisConnectionException _ex) {
+                } catch (CmisConnectionException | CmisUnauthorizedException _ex) {
                     logger.error("Cannot access to CMIS repository", _ex);
                 }
 
@@ -161,7 +161,7 @@ public class CMISStorageConfiguration {
                             (AbstractAuthenticationProvider) authProviderObj);
                     ((AbstractAuthenticationProvider) authProviderObj).setSession(session);
                 }
-                this.bindingSession = session;
+                this.siglaBindingSession = session;
             }
 
             public void addAutoVersion(Document doc,
@@ -170,7 +170,7 @@ public class CMISStorageConfiguration {
                         "service/api/metadata/node/");
                 link = link.concat(doc.getProperty(StoragePropertyNames.ALFCMIS_NODEREF.value()).getValueAsString().replace(":/", ""));
                 UrlBuilder url = new UrlBuilder(link);
-                Response resp = CmisBindingsHelper.getHttpInvoker(bindingSession).invokePOST(url,
+                Response resp = CmisBindingsHelper.getHttpInvoker(siglaBindingSession).invokePOST(url,
                         MimeTypes.JSON.mimetype(), new Output() {
                             public void write(OutputStream out) throws Exception {
                                 JSONObject jsonObject = new JSONObject();
@@ -181,7 +181,7 @@ public class CMISStorageConfiguration {
                                 jsonObject.put("properties", jsonObjectProp);
                                 out.write(jsonObject.toString().getBytes());
                             }
-                        }, bindingSession);
+                        }, siglaBindingSession);
                 int status = resp.getResponseCode();
                 if (status == HttpStatus.SC_NOT_FOUND
                         || status == HttpStatus.SC_BAD_REQUEST
@@ -207,7 +207,7 @@ public class CMISStorageConfiguration {
                     return Optional.ofNullable(cmisObject)
                             .map(Document.class::cast)
                             .map(document1 -> document1.<String>getPropertyValue(PropertyIds.PARENT_ID))
-                            .map(parentId -> session.getObject(parentId))
+                            .map(parentId -> siglaSession.getObject(parentId))
                             .map(Folder.class::cast)
                             .map(folder -> folder.getPath().concat(StorageService.SUFFIX).concat(cmisObject.getName()))
                             .orElse(null);
@@ -216,10 +216,11 @@ public class CMISStorageConfiguration {
 
             @Override
             public StorageObject createFolder(String path, String name, Map<String, Object> metadata) {
-                return Optional.ofNullable(session.getObjectByPath(path))
+                return Optional.ofNullable(siglaSession)
+                        .flatMap(session -> Optional.ofNullable(session.getObjectByPath(path)))
                         .map(Folder.class::cast)
-                        .map(folder -> session.createFolder(metadata, folder))
-                        .map(objectId -> session.getObject(objectId))
+                        .map(folder -> siglaSession.createFolder(metadata, folder))
+                        .map(objectId -> siglaSession.getObject(objectId))
                         .map(Folder.class::cast)
                         .map(folder -> new StorageObject(folder.getId(), folder.getPath(), convertProperties(folder.getProperties())))
                         .orElseThrow(() -> new StorageException(StorageException.Type.INVALID_ARGUMENTS, "You must specify path for create folder"));
@@ -228,10 +229,10 @@ public class CMISStorageConfiguration {
             @Override
             public StorageObject createDocument(InputStream inputStream, String contentType, Map<String, Object> metadataProperties,
                                                 StorageObject parentObject, String path, boolean makeVersionable, Permission... permissions) {
-                return Optional.ofNullable(session.createObjectId(parentObject.getKey()))
+                return Optional.ofNullable(siglaSession.createObjectId(parentObject.getKey()))
                         .map(objectId -> {
                             try {
-                                return session.createDocument(
+                                return siglaSession.createDocument(
                                         metadataProperties,
                                         objectId,
                                         new ContentStreamImpl(
@@ -246,7 +247,7 @@ public class CMISStorageConfiguration {
                                 throw new StorageException(StorageException.Type.GENERIC, _ex.getMessage(), _ex);
                             }
                         })
-                        .map(objectId -> session.getObject(objectId))
+                        .map(objectId -> siglaSession.getObject(objectId))
                         .map(Document.class::cast)
                         .map(document -> {
                             if (makeVersionable) {
@@ -260,11 +261,12 @@ public class CMISStorageConfiguration {
 
             @Override
             public void updateProperties(StorageObject storageObject, Map<String, Object> metadataProperties) {
-                CmisObject cmisobject = Optional.ofNullable(session.getObject(storageObject.getKey()))
+                CmisObject cmisobject = Optional.ofNullable(siglaSession)
+                        .flatMap(session -> Optional.ofNullable(session.getObject(storageObject.getKey())))
                         .filter(cmisObject -> cmisObject.getBaseTypeId().equals(BaseTypeId.CMIS_DOCUMENT))
                         .map(Document.class::cast)
-                        .map(document -> session.getObject(document.<String>getPropertyValue("cmis:versionSeriesId")))
-                        .orElseGet(() -> session.getObject(storageObject.getKey()));
+                        .map(document -> siglaSession.getObject(document.<String>getPropertyValue("cmis:versionSeriesId")))
+                        .orElseGet(() -> siglaSession.getObject(storageObject.getKey()));
 
                 Optional.ofNullable(cmisobject)
                         .map(cmisObject -> {
@@ -289,11 +291,12 @@ public class CMISStorageConfiguration {
 
             @Override
             public StorageObject updateStream(String key, InputStream inputStream, String contentType) {
-                CmisObject cmisobject = Optional.ofNullable(session.getObject(key))
+                CmisObject cmisobject = Optional.ofNullable(siglaSession)
+                        .flatMap(session -> Optional.ofNullable(session.getObject(key)))
                         .filter(cmisObject -> cmisObject.getBaseTypeId().equals(BaseTypeId.CMIS_DOCUMENT))
                         .map(Document.class::cast)
-                        .map(document -> session.getObject(document.<String>getPropertyValue("cmis:versionSeriesId")))
-                        .orElseGet(() -> session.getObject(key));
+                        .map(document -> siglaSession.getObject(document.<String>getPropertyValue("cmis:versionSeriesId")))
+                        .orElseGet(() -> siglaSession.getObject(key));
 
                 return Optional.ofNullable(cmisobject)
                         .filter(Document.class::isInstance)
@@ -305,7 +308,7 @@ public class CMISStorageConfiguration {
                                             BigInteger.ZERO,
                                             contentType,
                                             inputStream), true))
-                                    .orElse((Document) session.getObject(key));
+                                    .orElse((Document) siglaSession.getObject(key));
                         })
                         .map(document -> new StorageObject(document.getId(), getPath(document), convertProperties(document.getProperties())))
                         .orElseThrow(() -> new StorageException(StorageException.Type.INVALID_ARGUMENTS, "You must specify key for update stream"));
@@ -313,14 +316,16 @@ public class CMISStorageConfiguration {
 
             @Override
             public InputStream getInputStream(String key) {
-                return Optional.ofNullable(session.getObject(key))
+                return Optional.ofNullable(siglaSession)
+                        .flatMap(session -> Optional.ofNullable(session.getObject(key)))
                         .map(Document.class::cast)
                         .map(document -> document.getContentStream().getStream())
                         .orElseThrow(() -> new StorageException(StorageException.Type.INVALID_ARGUMENTS, "You must specify key for get input stream"));
             }
 
             public InputStream getInputStream(String key, Boolean majorVersion) {
-                return Optional.ofNullable(session.getObject(key))
+                return Optional.ofNullable(siglaSession)
+                        .flatMap(session -> Optional.ofNullable(session.getObject(key)))
                         .map(Document.class::cast)
                         .map(document -> document.getObjectOfLatestVersion(majorVersion))
                         .map(document -> document.getContentStream().getStream())
@@ -328,7 +333,8 @@ public class CMISStorageConfiguration {
             }
 
             public InputStream getInputStream(String key, String versionId) {
-                return Optional.ofNullable(session.getObject(key))
+                return Optional.ofNullable(siglaSession)
+                        .flatMap(session -> Optional.ofNullable(session.getObject(key)))
                         .map(Document.class::cast)
                         .map(document ->
                                 document.getAllVersions().stream()
@@ -343,10 +349,10 @@ public class CMISStorageConfiguration {
             @Override
             public Boolean delete(String id) {
                 try {
-                    Optional<CmisObject> cmisObject = Optional.ofNullable(session.getObject(id));
+                    Optional<CmisObject> cmisObject = Optional.ofNullable(siglaSession.getObject(id));
                     boolean exists = cmisObject.isPresent();
                     if (exists) {
-                        if (cmisObject.get().getBaseTypeId().value().equals(StoragePropertyNames.CMIS_FOLDER.value())) {
+                        if (cmisObject.get().getBaseTypeId().equals(StoragePropertyNames.CMIS_FOLDER.value())) {
                             ((Folder) cmisObject.get()).deleteTree(true, UnfileObject.DELETE, false);
                         } else {
                             ((Document) cmisObject.get()).delete();
@@ -364,7 +370,8 @@ public class CMISStorageConfiguration {
             @Override
             public StorageObject getObject(String id) {
                 try {
-                    return Optional.ofNullable(session.getObject(id))
+                    return Optional.ofNullable(siglaSession)
+                            .flatMap(session -> Optional.ofNullable(session.getObject(id)))
                             .map(cmisObject -> new StorageObject(cmisObject.getId(), getPath(cmisObject), convertProperties(cmisObject.getProperties())))
                             .orElse(null);
                 } catch (CmisObjectNotFoundException _ex) {
@@ -386,7 +393,8 @@ public class CMISStorageConfiguration {
             @Override
             public StorageObject getObjectByPath(String path, boolean isFolder) {
                 try {
-                    return Optional.ofNullable(session.getObjectByPath(path))
+                    return Optional.ofNullable(siglaSession)
+                            .flatMap(session -> Optional.ofNullable(session.getObjectByPath(path)))
                             .map(cmisObject -> new StorageObject(cmisObject.getId(), getPath(cmisObject), convertProperties(cmisObject.getProperties())))
                             .orElse(null);
                 } catch (CmisObjectNotFoundException _ex) {
@@ -399,7 +407,8 @@ public class CMISStorageConfiguration {
 
             @Override
             public List<StorageObject> getChildren(String key) {
-                return Optional.ofNullable(session.getObject(key))
+                return Optional.ofNullable(siglaSession)
+                        .flatMap(session -> Optional.ofNullable(session.getObject(key)))
                         .map(Folder.class::cast)
                         .map(folder -> folder.getChildren())
                         .map(cmisObjects -> {
@@ -415,7 +424,8 @@ public class CMISStorageConfiguration {
 
             @Override
             public List<StorageObject> getChildren(String key, int depth) {
-                return Optional.ofNullable(session.getObject(key))
+                return Optional.ofNullable(siglaSession)
+                        .flatMap(session -> Optional.ofNullable(session.getObject(key)))
                         .map(Folder.class::cast)
                         .map(folder -> folder.getDescendants(depth))
                         .map(cmisObjects -> {
@@ -437,8 +447,8 @@ public class CMISStorageConfiguration {
 
             @Override
             public List<StorageObject> search(String query) {
-                return Optional.ofNullable(query)
-                        .map(statement -> session.query(statement, false))
+                return Optional.ofNullable(siglaSession)
+                        .map(session -> siglaSession.query(query, false))
                         .map(queryResults -> {
                             List<StorageObject> list = new ArrayList<StorageObject>();
                             if (queryResults.getTotalNumItems() > 0) {
@@ -461,12 +471,12 @@ public class CMISStorageConfiguration {
                 try {
                     String webScriptURL = baseURL.concat(url);
                     UrlBuilder urlBuilder = new UrlBuilder(new URIBuilder(webScriptURL).build().toString());
-                    Response response = CmisBindingsHelper.getHttpInvoker(bindingSession).invokePOST(urlBuilder, MimeTypes.JSON.mimetype(),
+                    Response response = CmisBindingsHelper.getHttpInvoker(siglaBindingSession).invokePOST(urlBuilder, MimeTypes.JSON.mimetype(),
                             new Output() {
                                 public void write(OutputStream out) throws Exception {
                                     out.write(json.getBytes());
                                 }
-                            }, bindingSession);
+                            }, siglaBindingSession);
                     int status = response.getResponseCode();
                     if (status == HttpStatus.SC_NOT_FOUND
                             || status == HttpStatus.SC_INTERNAL_SERVER_ERROR
@@ -488,11 +498,11 @@ public class CMISStorageConfiguration {
             @Override
             public void copyNode(StorageObject source, StorageObject target) {
                 Optional.ofNullable(source)
-                        .map(storageObject -> session.getObject(storageObject.getKey()))
+                        .map(storageObject -> siglaSession.getObject(storageObject.getKey()))
                         .map(Document.class::cast)
                         .ifPresent(document -> {
                             try {
-                                document.addToFolder((Folder) session.getObject(target.getKey()), true);
+                                document.addToFolder((Folder) siglaSession.getObject(target.getKey()), true);
                             } catch (CmisRuntimeException _ex) {
                                 logger.warn(_ex.getMessage(), _ex);
                             }
@@ -505,7 +515,7 @@ public class CMISStorageConfiguration {
                         .concat("service/cnr/nodes/permissions/")
                         .concat(storageObject.<String>getPropertyValue(StoragePropertyNames.ALFCMIS_NODEREF.value()).replace(":/", ""));
                 UrlBuilder url = new UrlBuilder(link);
-                Response resp = CmisBindingsHelper.getHttpInvoker(bindingSession).invokePOST(url,
+                Response resp = CmisBindingsHelper.getHttpInvoker(siglaBindingSession).invokePOST(url,
                         MimeTypes.JSON.mimetype(), new Output() {
                             public void write(OutputStream out) throws Exception {
                                 JSONObject jsonObject = new JSONObject();
@@ -521,7 +531,7 @@ public class CMISStorageConfiguration {
                                 jsonObject.put("permissions", jsonArray);
                                 out.write(jsonObject.toString().getBytes());
                             }
-                        }, bindingSession);
+                        }, siglaBindingSession);
                 int status = resp.getResponseCode();
 
                 logger.info((remove ? "remove" : "add") + " permission " + permission + " on item "
@@ -539,7 +549,7 @@ public class CMISStorageConfiguration {
                         .concat("service/cnr/nodes/permissions/")
                         .concat(storageObject.<String>getPropertyValue(StoragePropertyNames.ALFCMIS_NODEREF.value()).replace(":/", ""));
                 UrlBuilder url = new UrlBuilder(link);
-                Response resp = CmisBindingsHelper.getHttpInvoker(bindingSession).invokePOST(url,
+                Response resp = CmisBindingsHelper.getHttpInvoker(siglaBindingSession).invokePOST(url,
                         MimeTypes.JSON.mimetype(), new Output() {
                             public void write(OutputStream out) throws Exception {
                                 JSONObject jsonObject = new JSONObject();
@@ -548,7 +558,7 @@ public class CMISStorageConfiguration {
                                 jsonObject.put("isInherited", inherited);
                                 out.write(jsonObject.toString().getBytes());
                             }
-                        }, bindingSession);
+                        }, siglaBindingSession);
                 int status = resp.getResponseCode();
                 if (status == HttpStatus.SC_NOT_FOUND
                         || status == HttpStatus.SC_BAD_REQUEST
@@ -560,8 +570,8 @@ public class CMISStorageConfiguration {
             @Override
             public List<StorageObject> getRelationship(String key, String relationshipName, boolean fromTarget) {
                 List<StorageObject> result = new ArrayList<StorageObject>();
-                session.getRelationships(new ObjectIdImpl(key), true,
-                        fromTarget ? RelationshipDirection.TARGET : RelationshipDirection.SOURCE, null, session.getDefaultContext())
+                siglaSession.getRelationships(new ObjectIdImpl(key), true,
+                        fromTarget ? RelationshipDirection.TARGET : RelationshipDirection.SOURCE, null, siglaSession.getDefaultContext())
                         .iterator()
                         .forEachRemaining(relationship -> {
                             CmisObject cmisObject = fromTarget ? relationship.getSource() : relationship.getTarget();
@@ -578,7 +588,7 @@ public class CMISStorageConfiguration {
                 properties.put(PropertyIds.OBJECT_TYPE_ID, relationshipName);
                 properties.put(PropertyIds.SOURCE_ID, source);
                 properties.put(PropertyIds.TARGET_ID, target);
-                session.createRelationship(properties);
+                siglaSession.createRelationship(properties);
             }
 
             @Override
@@ -586,7 +596,7 @@ public class CMISStorageConfiguration {
                 return StoreType.CMIS;
             }
         };
-        storageService.init();
-        return storageService;
+        siglaStorageService.init();
+        return siglaStorageService;
     }
 }
