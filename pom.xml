@@ -24,5 +24,9 @@
         <module>storage-cloud-s3</module>
         <module>storage-cloud-azure</module>
     </modules>
-
+    <scm>
+        <connection>scm:git:ssh://git@git.si.cnr.it/dev/storage-cloud.git</connection>
+        <developerConnection>scm:git:ssh://git@git.si.cnr.it/dev/storage-cloud.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
 </project>
