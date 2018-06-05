@@ -4,7 +4,7 @@ package it.cnr.si.spring.storage.config;
  * Created by mspasiano on 6/15/17.
  */
 public enum StoragePropertyNames {
-
+    SYS_ARCHIVED("P:sys:archived"),
     NAME("cmis:name"),
     TITLE("cm:title"),
     DESCRIPTION("cm:description"),
