@@ -352,7 +352,7 @@ public class CMISStorageConfiguration {
                     Optional<CmisObject> cmisObject = Optional.ofNullable(siglaSession.getObject(id));
                     boolean exists = cmisObject.isPresent();
                     if (exists) {
-                        if (cmisObject.get().getBaseTypeId().equals(StoragePropertyNames.CMIS_FOLDER.value())) {
+                        if (cmisObject.get().getBaseTypeId().value().equals(StoragePropertyNames.CMIS_FOLDER.value())) {
                             ((Folder) cmisObject.get()).deleteTree(true, UnfileObject.DELETE, false);
                         } else {
                             ((Document) cmisObject.get()).delete();
