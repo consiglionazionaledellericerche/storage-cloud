@@ -295,7 +295,7 @@ public class CMISStorageConfiguration {
                         .flatMap(session -> Optional.ofNullable(session.getObject(key)))
                         .filter(cmisObject -> cmisObject.getBaseTypeId().equals(BaseTypeId.CMIS_DOCUMENT))
                         .map(Document.class::cast)
-                        .map(document -> siglaSession.getObject(document.<String>getPropertyValue("cmis:versionSeriesId")))
+                        .map(document -> siglaSession.getObject(document.<String>getPropertyValue(PropertyIds.VERSION_SERIES_ID)))
                         .orElseGet(() -> siglaSession.getObject(key));
 
                 return Optional.ofNullable(cmisobject)
@@ -310,7 +310,11 @@ public class CMISStorageConfiguration {
                                             inputStream), true))
                                     .orElse((Document) siglaSession.getObject(key));
                         })
-                        .map(document -> new StorageObject(document.getId(), getPath(document), convertProperties(document.getProperties())))
+                        .map(document -> new StorageObject(
+                                document.<String>getPropertyValue(PropertyIds.VERSION_SERIES_ID),
+                                getPath(document),
+                                convertProperties(document.getProperties())
+                        ))
                         .orElseThrow(() -> new StorageException(StorageException.Type.INVALID_ARGUMENTS, "You must specify key for update stream"));
             }
 
