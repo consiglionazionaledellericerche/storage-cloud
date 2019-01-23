@@ -55,6 +55,9 @@ public class CMISStorageConfiguration {
 
     @Value("${org.apache.chemistry.opencmis.binding.atompub.url}")
     private String ATOMPUB_URL;
+    @Value("${org.apache.chemistry.opencmis.binding.browser.url}")
+    private String BROWSER_URL;
+
     @Value("${org.apache.chemistry.opencmis.binding.spi.type}")
     private String BINDING_TYPE;
     @Value("${org.apache.chemistry.opencmis.binding.connecttimeout}")
@@ -98,6 +101,7 @@ public class CMISStorageConfiguration {
                 SessionFactory sessionFactory = SessionFactoryImpl.newInstance();
                 Map<String, String> sessionParameters = new HashMap<String, String>();
                 sessionParameters.put(SessionParameter.ATOMPUB_URL, ATOMPUB_URL);
+                sessionParameters.put(SessionParameter.BROWSER_URL, BROWSER_URL);
                 sessionParameters.put(SessionParameter.BINDING_TYPE, BINDING_TYPE);
                 sessionParameters.put(SessionParameter.CONNECT_TIMEOUT, CONNECT_TIMEOUT);
                 sessionParameters.put(SessionParameter.READ_TIMEOUT, READ_TIMEOUT);
@@ -126,6 +130,7 @@ public class CMISStorageConfiguration {
                 BindingSession session = new SessionImpl();
                 Map<String, String> sessionParameters = new HashMap<String, String>();
                 sessionParameters.put(SessionParameter.ATOMPUB_URL, ATOMPUB_URL);
+                sessionParameters.put(SessionParameter.BROWSER_URL, BROWSER_URL);
                 sessionParameters.put(SessionParameter.BINDING_TYPE, BINDING_TYPE);
                 sessionParameters.put(SessionParameter.CONNECT_TIMEOUT, CONNECT_TIMEOUT);
                 sessionParameters.put(SessionParameter.READ_TIMEOUT, READ_TIMEOUT);
