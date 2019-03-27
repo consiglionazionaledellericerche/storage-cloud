@@ -315,11 +315,9 @@ public class CMISStorageConfiguration {
                                             inputStream), true))
                                     .orElse((Document) siglaSession.getObject(key));
                         })
-                        .map(document -> new StorageObject(
-                                document.<String>getPropertyValue(PropertyIds.VERSION_SERIES_ID),
-                                getPath(document),
-                                convertProperties(document.getProperties())
-                        ))
+                        .map(document -> {
+                            return getObject(document.<String>getPropertyValue(PropertyIds.VERSION_SERIES_ID));
+                        })
                         .orElseThrow(() -> new StorageException(StorageException.Type.INVALID_ARGUMENTS, "You must specify key for update stream"));
             }
 
