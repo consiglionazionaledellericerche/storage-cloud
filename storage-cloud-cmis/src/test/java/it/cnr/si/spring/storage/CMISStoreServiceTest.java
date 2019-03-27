@@ -3,6 +3,7 @@ package it.cnr.si.spring.storage;
 import it.cnr.si.spring.storage.bulk.StorageFile;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
 import org.apache.commons.io.IOUtils;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -91,6 +92,63 @@ public class CMISStoreServiceTest {
         ).getKey());
         assertEquals(TEXT2, IOUtils.toString(storeService.getResource(storageObject1),Charset.defaultCharset()));
         assertEquals(BigInteger.valueOf(16), storageObject1.<BigInteger>getPropertyValue(StoragePropertyNames.CONTENT_STREAM_LENGTH.value()));
+    }
+
+    @Test
+    public void testGetKeyFromRestoreDocument() {
+
+        Optional.ofNullable(storeService.getStorageObjectByPath("/test/test.xml"))
+                .ifPresent(storageObject -> storeService.delete(storageObject));
+
+        StorageFile storageFile = new StorageFile(IOUtils.toInputStream(TEXT, Charset.defaultCharset()),
+                MimeTypes.XML.mimetype(),
+                "test.xml");
+
+        StorageObject storageObject = storeService.restoreSimpleDocument(
+                storageFile,
+                new ByteArrayInputStream(storageFile.getBytes()),
+                storageFile.getContentType(),
+                storageFile.getFileName(),
+                "/test",
+                true);
+
+        Assert.assertEquals("1.0",
+                Arrays.asList(storageObject.getKey().split(";"))
+                .stream()
+                .skip(1)
+                .findAny()
+                .orElse(null));
+
+        StorageObject storageObject2 = storeService.restoreSimpleDocument(
+                storageFile,
+                new ByteArrayInputStream(storageFile.getBytes()),
+                storageFile.getContentType(),
+                storageFile.getFileName(),
+                "/test",
+                true);
+
+        Assert.assertEquals("1.1",
+                Arrays.asList(storageObject2.getKey().split(";"))
+                        .stream()
+                        .skip(1)
+                        .findAny()
+                        .orElse(null));
+
+        StorageObject storageObject3 = storeService.restoreSimpleDocument(
+                storageFile,
+                new ByteArrayInputStream(storageFile.getBytes()),
+                storageFile.getContentType(),
+                storageFile.getFileName(),
+                "/test",
+                true);
+
+        Assert.assertEquals("1.2",
+                Arrays.asList(storageObject3.getKey().split(";"))
+                        .stream()
+                        .skip(1)
+                        .findAny()
+                        .orElse(null));
+
     }
 
 }
