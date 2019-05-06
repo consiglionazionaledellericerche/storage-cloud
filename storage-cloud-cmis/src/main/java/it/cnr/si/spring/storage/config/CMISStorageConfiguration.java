@@ -211,10 +211,8 @@ public class CMISStorageConfiguration {
                 } else {
                     return Optional.ofNullable(cmisObject)
                             .map(Document.class::cast)
-                            .map(document1 -> document1.<String>getPropertyValue(PropertyIds.PARENT_ID))
-                            .map(parentId -> siglaSession.getObject(parentId))
-                            .map(Folder.class::cast)
-                            .map(folder -> folder.getPath().concat(StorageService.SUFFIX).concat(cmisObject.getName()))
+                            .map(document1 -> document1.getPaths())
+                            .map(strings -> String.join(";", strings))
                             .orElse(null);
                 }
             }
