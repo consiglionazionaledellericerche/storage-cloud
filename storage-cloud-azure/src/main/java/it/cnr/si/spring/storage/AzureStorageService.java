@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 /**
  * Created by marco.spasiano on 06/07/17.
  */
-@Service
 public class AzureStorageService implements StorageService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureStorageService.class);
