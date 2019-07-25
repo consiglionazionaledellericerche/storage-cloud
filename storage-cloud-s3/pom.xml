@@ -28,7 +28,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>it.cnr.si</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>storage-cloud-commons</artifactId>
             <version>${project.version}</version>
         </dependency>
