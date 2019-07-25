@@ -15,7 +15,7 @@
   <a href="https://github.com/consiglionazionaledellericerche/storage-cloud/blob/master/LICENSE">
     <img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg" alt="storage-cloud is released under the GNU AGPL v3 license." />
   </a>
-  <a href="https://mvnrepository.com/artifact/it.cnr.si/storage-cloud">
+  <a href="https://mvnrepository.com/artifact/it.cnr.si.storage/storage-cloud">
     <img alt="Maven Central" src="https://img.shields.io/maven-central/v/it.cnr.si.storage/storage-cloud.svg?style=flat" alt="Current version on maven central.">
   </a>
 </p>
