@@ -43,17 +43,6 @@
         <module>storage-cloud-s3</module>
         <module>storage-cloud-azure</module>
     </modules>
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <argLine>-Dspring.profiles.active=${spring.profiles.active}</argLine>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
     <licenses>
         <license>
             <name>GNU AFFERO GENERAL PUBLIC LICENSE</name>
