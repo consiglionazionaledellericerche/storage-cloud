@@ -15,10 +15,12 @@
  *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package it.cnr.si.spring.storage.converter;
+package it.cnr.si.spring.storage;
 
-import java.io.Serializable;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
 
-public interface Converter<H extends Serializable, T> {
-    public H convert(T obj);
+@Configuration
+@ComponentScan(basePackages = {"it.cnr.si"})
+public class AppConfig {
 }

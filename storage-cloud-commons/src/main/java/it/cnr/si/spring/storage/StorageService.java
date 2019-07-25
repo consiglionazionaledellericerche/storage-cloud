@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2019  Consiglio Nazionale delle Ricerche
+ *
+ *     This program is free software: you can redistribute it and/or modify
+ *     it under the terms of the GNU Affero General Public License as
+ *     published by the Free Software Foundation, either version 3 of the
+ *     License, or (at your option) any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU Affero General Public License for more details.
+ *
+ *     You should have received a copy of the GNU Affero General Public License
+ *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package it.cnr.si.spring.storage;
 
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -21,9 +38,9 @@ public interface StorageService {
     /**
      * create a new folder
      *
-     * @param path
-     * @param name
-     * @param metadata
+     * @param path     folder path
+     * @param name     name of folder
+     * @param metadata object metadata
      * @return StorageObject
      */
     StorageObject createFolder(String path, String name, Map<String, Object> metadata);
@@ -31,13 +48,13 @@ public interface StorageService {
     /**
      * create a new document
      *
-     * @param inputStream
-     * @param contentType
-     * @param metadataProperties
-     * @param parentObject
-     * @param path
-     * @param makeVersionable
-     * @param permissions
+     * @param inputStream        stream of document
+     * @param contentType        content type
+     * @param metadataProperties metadataProperties
+     * @param parentObject       parentObject
+     * @param path               path
+     * @param makeVersionable    makeVersionable
+     * @param permissions        permissions
      * @return StorageObject
      */
     StorageObject createDocument(InputStream inputStream, String contentType, Map<String, Object> metadataProperties, StorageObject parentObject, String path, boolean makeVersionable, Permission... permissions);
@@ -45,19 +62,18 @@ public interface StorageService {
     /**
      * properties of store object
      *
-     * @param storageObject
-     * @param metadataProperties
-     * @return StorageObject
+     * @param storageObject      storageObject
+     * @param metadataProperties metadataProperties
      */
     void updateProperties(StorageObject storageObject, Map<String, Object> metadataProperties);
 
     /**
      * Update stream of document
      *
-     * @param key
-     * @param inputStream
-     * @param contentType
-     * @return StorageObject
+     * @param key         key
+     * @param inputStream inputStream
+     * @param contentType contentType
+     * @return StorageObject StorageObject
      */
     StorageObject updateStream(String key, InputStream inputStream, String contentType);
 
@@ -72,18 +88,18 @@ public interface StorageService {
     /**
      * get object input stream for specified version
      *
-     * @param key
-     * @param versionId
-     * @return
+     * @param key       key
+     * @param versionId versionId
+     * @return object InputStream
      */
     InputStream getInputStream(String key, String versionId);
 
     /**
      * get object input stream for major version
      *
-     * @param key
-     * @param majorVersion
-     * @return
+     * @param key          key
+     * @param majorVersion majorVersion
+     * @return object InputStream
      */
     InputStream getInputStream(String key, Boolean majorVersion);
 
@@ -96,53 +112,55 @@ public interface StorageService {
     Boolean delete(String id);
 
     /**
-     * @param id
-     * @return
+     * @param id object id
+     * @return StorageObject
      */
     StorageObject getObject(String id);
 
     /**
-     * @param id
-     * @param customCredentials
-     * @return
+     * @param id                object id
+     * @param customCredentials credential
+     * @return StorageObject
      */
     StorageObject getObject(String id, UsernamePasswordCredentials customCredentials);
 
     /**
-     * @param path
-     * @return
+     * @param path     object path
+     * @param isFolder isFolder
+     * @return StorageObject
      */
     StorageObject getObjectByPath(String path, boolean isFolder);
 
     /**
      * retrieve all children
      *
-     * @param key
-     * @return
+     * @param key object id
+     * @return list of StorageObject
      */
     List<StorageObject> getChildren(String key);
 
     /**
      * retrieve all children
      *
-     * @param key
-     * @return
+     * @param key   object id
+     * @param depth depth
+     * @return list of StorageObject
      */
     List<StorageObject> getChildren(String key, int depth);
 
     /**
      * search documents or folders
      *
-     * @param query
-     * @return
+     * @param query query statement
+     * @return list of StorageObject
      */
     List<StorageObject> search(String query);
 
     /**
      * Sign documents
      *
-     * @param json
-     * @param url
+     * @param json json
+     * @param url  url
      * @return message error or null
      */
     String signDocuments(String json, String url);
@@ -150,38 +168,38 @@ public interface StorageService {
     /**
      * Link object
      *
-     * @param source
-     * @param target
+     * @param source source
+     * @param target target
      */
     void copyNode(StorageObject source, StorageObject target);
 
     /**
      * Manage permission
      *
-     * @param storageObject
-     * @param permission
-     * @param remove
+     * @param storageObject storageObject
+     * @param permission    permission
+     * @param remove        remove
      */
     void managePermission(StorageObject storageObject, Map<String, ACLType> permission, boolean remove);
 
     /**
-     * @param storageObject
-     * @param inherited
+     * @param storageObject storageObject
+     * @param inherited     inherited
      */
     void setInheritedPermission(StorageObject storageObject, Boolean inherited);
 
     /**
-     * @param key
-     * @param relationshipName
-     * @param fromTarget
-     * @return
+     * @param key              key
+     * @param relationshipName relationshipName
+     * @param fromTarget       fromTarget
+     * @return list of StorageObject
      */
     List<StorageObject> getRelationship(String key, String relationshipName, boolean fromTarget);
 
     /**
-     * @param source
-     * @param target
-     * @param relationshipName
+     * @param source           source
+     * @param target           target
+     * @param relationshipName relationshipName
      */
     void createRelationship(String source, String target, String relationshipName);
 
