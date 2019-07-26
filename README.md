@@ -24,7 +24,7 @@
 |Artifact| Version |
 |---|---|
 |[Apache Chemistry](https://chemistry.apache.org/java/opencmis.html)| ![Maven Central](https://img.shields.io/maven-central/v/org.apache.chemistry.opencmis/chemistry-opencmis-client-impl.svg)|
-|[Spring.io](https://spring.io/)| ![Maven Central with version prefix filter](https://img.shields.io/maven-central/v/org.springframework/spring-context/4.3.3.RELEASE.svg) |
+|[Spring.io](https://spring.io/)| ![Maven Central with version prefix filter](https://img.shields.io/maven-central/v/org.springframework/spring-context/5.1.8.RELEASE.svg) |
 |[AZURE](https://mvnrepository.com/artifact/com.microsoft.azure/azure-storage) | ![Maven Central](https://img.shields.io/maven-central/v/com.microsoft.azure/azure-storage/5.3.1.svg)|
 |[AMAZON S3](https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-s3) | ![Maven Central](https://img.shields.io/maven-central/v/com.amazonaws/aws-java-sdk-s3/1.11.84.svg)|
 
