@@ -22,7 +22,7 @@
     <parent>
         <artifactId>storage-cloud</artifactId>
         <groupId>it.cnr.si.storage</groupId>
-        <version>1.0.4-SNAPSHOT</version>
+        <version>1.0.5-SNAPSHOT</version>
     </parent>
     <dependencies>
         <dependency>
