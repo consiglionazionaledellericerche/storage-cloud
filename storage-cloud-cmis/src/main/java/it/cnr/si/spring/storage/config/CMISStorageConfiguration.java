@@ -49,10 +49,10 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
+import org.springframework.context.annotation.PropertySource;
 
 import javax.annotation.PostConstruct;
 import java.io.InputStream;
@@ -68,24 +68,26 @@ import java.util.stream.Collectors;
  * Created by mspasiano on 6/15/17.
  */
 @Configuration
+@PropertySource("classpath:META-INF/spring/cmis.properties")
 public class CMISStorageConfiguration {
 
     private static final Logger logger = LoggerFactory.getLogger(CMISStorageConfiguration.class);
+    private static final String REPOSITORY_BASE_URL = "repository.base.url";
 
-    @Autowired
-    private Environment env;
-
+    @Value("#{${cmis.parameters}}")
     private Map<String, String> sessionParameters;
 
     @PostConstruct
     public void parameters() {
-        sessionParameters = Arrays.asList(CMISSessionParameter.values())
+        /**
+         * Removal of all non-valued parameters
+         */
+        sessionParameters = sessionParameters
+                .entrySet()
                 .stream()
-                .filter(cmisSessionParameter -> env.containsProperty(cmisSessionParameter.value()))
-                .collect(Collectors.toMap(
-                        cmisSessionParameter -> cmisSessionParameter.value,
-                        cmisSessionParameter -> env.getProperty(cmisSessionParameter.value)
-                ));
+                .filter(stringStringEntry -> !stringStringEntry.getValue().equals("${".concat(stringStringEntry.getKey()).concat("}")))
+                .collect(Collectors.toMap(x -> x.getKey(), x -> x.getValue()));
+        logger.debug(sessionParameters.toString());
     }
 
     @Bean
@@ -108,8 +110,8 @@ public class CMISStorageConfiguration {
 
             public Session createSession() {
                 return createSession(
-                        sessionParameters.get(CMISSessionParameter.USER.value()),
-                        sessionParameters.get(CMISSessionParameter.PASSWORD.value())
+                        sessionParameters.get(SessionParameter.USER),
+                        sessionParameters.get(SessionParameter.PASSWORD)
                 );
             }
 
@@ -157,7 +159,7 @@ public class CMISStorageConfiguration {
 
             public void addAutoVersion(Document doc,
                                        final boolean autoVersionOnUpdateProps) throws StorageException {
-                String link = sessionParameters.get(CMISSessionParameter.REPOSITORY_BASE_URL.value()).concat(
+                String link = sessionParameters.get(REPOSITORY_BASE_URL).concat(
                         "service/api/metadata/node/");
                 link = link.concat(doc.getProperty(StoragePropertyNames.ALFCMIS_NODEREF.value()).getValueAsString().replace(":/", ""));
                 UrlBuilder url = new UrlBuilder(link);
@@ -300,7 +302,7 @@ public class CMISStorageConfiguration {
                                     .orElse((Document) siglaSession.getObject(key));
                         })
                         .map(document -> {
-                            return getObject(document.<String>getPropertyValue(PropertyIds.VERSION_SERIES_ID));
+                            return getObject(document.getPropertyValue(PropertyIds.VERSION_SERIES_ID));
                         })
                         .orElseThrow(() -> new StorageException(StorageException.Type.INVALID_ARGUMENTS, "You must specify key for update stream"));
             }
@@ -346,7 +348,7 @@ public class CMISStorageConfiguration {
                         if (cmisObject.get().getBaseTypeId().value().equals(StoragePropertyNames.CMIS_FOLDER.value())) {
                             ((Folder) cmisObject.get()).deleteTree(true, UnfileObject.DELETE, false);
                         } else {
-                            ((Document) cmisObject.get()).delete();
+                            cmisObject.get().delete();
                         }
                     } else {
                         logger.warn("item {} does not exist", id);
@@ -460,7 +462,7 @@ public class CMISStorageConfiguration {
             @Override
             public String signDocuments(String json, String url) {
                 try {
-                    String webScriptURL = sessionParameters.get(CMISSessionParameter.REPOSITORY_BASE_URL.value()).concat(url);
+                    String webScriptURL = sessionParameters.get(REPOSITORY_BASE_URL).concat(url);
                     UrlBuilder urlBuilder = new UrlBuilder(new URIBuilder(webScriptURL).build().toString());
                     Response response = CmisBindingsHelper.getHttpInvoker(siglaBindingSession).invokePOST(urlBuilder, MimeTypes.JSON.mimetype(),
                             new Output() {
@@ -493,7 +495,7 @@ public class CMISStorageConfiguration {
                         .map(Document.class::cast)
                         .ifPresent(document -> {
                             try {
-                                document.addToFolder((Folder) siglaSession.getObject(target.getKey()), true);
+                                document.addToFolder(siglaSession.getObject(target.getKey()), true);
                             } catch (CmisRuntimeException _ex) {
                                 logger.warn(_ex.getMessage(), _ex);
                             }
@@ -502,7 +504,7 @@ public class CMISStorageConfiguration {
 
             @Override
             public void managePermission(StorageObject storageObject, Map<String, ACLType> permission, boolean remove) {
-                String link = sessionParameters.get(CMISSessionParameter.REPOSITORY_BASE_URL.value())
+                String link = sessionParameters.get(REPOSITORY_BASE_URL)
                         .concat("service/cnr/nodes/permissions/")
                         .concat(storageObject.<String>getPropertyValue(StoragePropertyNames.ALFCMIS_NODEREF.value()).replace(":/", ""));
                 UrlBuilder url = new UrlBuilder(link);
@@ -536,7 +538,7 @@ public class CMISStorageConfiguration {
 
             @Override
             public void setInheritedPermission(StorageObject storageObject, Boolean inherited) {
-                String link = sessionParameters.get(CMISSessionParameter.REPOSITORY_BASE_URL.value())
+                String link = sessionParameters.get(REPOSITORY_BASE_URL)
                         .concat("service/cnr/nodes/permissions/")
                         .concat(storageObject.<String>getPropertyValue(StoragePropertyNames.ALFCMIS_NODEREF.value()).replace(":/", ""));
                 UrlBuilder url = new UrlBuilder(link);
@@ -591,100 +593,4 @@ public class CMISStorageConfiguration {
         return siglaStorageService;
     }
 
-
-    public enum CMISSessionParameter {
-        REPOSITORY_BASE_URL("repository.base.url"),
-        USER(SessionParameter.USER),
-        PASSWORD(SessionParameter.PASSWORD),
-        BINDING_TYPE(SessionParameter.BINDING_TYPE),
-        BINDING_SPI_CLASS(SessionParameter.BINDING_SPI_CLASS),
-        FORCE_CMIS_VERSION(SessionParameter.FORCE_CMIS_VERSION),
-        ATOMPUB_URL(SessionParameter.ATOMPUB_URL),
-        WEBSERVICES_REPOSITORY_SERVICE(SessionParameter.WEBSERVICES_REPOSITORY_SERVICE),
-        WEBSERVICES_NAVIGATION_SERVICE(SessionParameter.WEBSERVICES_NAVIGATION_SERVICE),
-        WEBSERVICES_OBJECT_SERVICE(SessionParameter.WEBSERVICES_OBJECT_SERVICE),
-        WEBSERVICES_VERSIONING_SERVICE(SessionParameter.WEBSERVICES_VERSIONING_SERVICE),
-        WEBSERVICES_DISCOVERY_SERVICE(SessionParameter.WEBSERVICES_DISCOVERY_SERVICE),
-        WEBSERVICES_RELATIONSHIP_SERVICE(SessionParameter.WEBSERVICES_RELATIONSHIP_SERVICE),
-        WEBSERVICES_MULTIFILING_SERVICE(SessionParameter.WEBSERVICES_MULTIFILING_SERVICE),
-        WEBSERVICES_POLICY_SERVICE(SessionParameter.WEBSERVICES_POLICY_SERVICE),
-        WEBSERVICES_ACL_SERVICE(SessionParameter.WEBSERVICES_ACL_SERVICE),
-        WEBSERVICES_REPOSITORY_SERVICE_ENDPOINT(SessionParameter.WEBSERVICES_REPOSITORY_SERVICE_ENDPOINT),
-        WEBSERVICES_NAVIGATION_SERVICE_ENDPOINT(SessionParameter.WEBSERVICES_NAVIGATION_SERVICE_ENDPOINT),
-        WEBSERVICES_OBJECT_SERVICE_ENDPOINT(SessionParameter.WEBSERVICES_OBJECT_SERVICE_ENDPOINT),
-        WEBSERVICES_VERSIONING_SERVICE_ENDPOINT(SessionParameter.WEBSERVICES_VERSIONING_SERVICE_ENDPOINT),
-        WEBSERVICES_DISCOVERY_SERVICE_ENDPOINT(SessionParameter.WEBSERVICES_DISCOVERY_SERVICE_ENDPOINT),
-        WEBSERVICES_RELATIONSHIP_SERVICE_ENDPOINT(SessionParameter.WEBSERVICES_RELATIONSHIP_SERVICE_ENDPOINT),
-        WEBSERVICES_MULTIFILING_SERVICE_ENDPOINT(SessionParameter.WEBSERVICES_MULTIFILING_SERVICE_ENDPOINT),
-        WEBSERVICES_POLICY_SERVICE_ENDPOINT(SessionParameter.WEBSERVICES_POLICY_SERVICE_ENDPOINT),
-        WEBSERVICES_ACL_SERVICE_ENDPOINT(SessionParameter.WEBSERVICES_ACL_SERVICE_ENDPOINT),
-        WEBSERVICES_MEMORY_THRESHOLD(SessionParameter.WEBSERVICES_MEMORY_THRESHOLD),
-        WEBSERVICES_REPSONSE_MEMORY_THRESHOLD(SessionParameter.WEBSERVICES_REPSONSE_MEMORY_THRESHOLD),
-        WEBSERVICES_TEMP_DIRECTORY(SessionParameter.WEBSERVICES_TEMP_DIRECTORY),
-        WEBSERVICES_TEMP_ENCRYPT(SessionParameter.WEBSERVICES_TEMP_ENCRYPT),
-        WEBSERVICES_PORT_PROVIDER_CLASS(SessionParameter.WEBSERVICES_PORT_PROVIDER_CLASS),
-        WEBSERVICES_JAXWS_IMPL(SessionParameter.WEBSERVICES_JAXWS_IMPL),
-        BROWSER_URL(SessionParameter.BROWSER_URL),
-        BROWSER_SUCCINCT(SessionParameter.BROWSER_SUCCINCT),
-        BROWSER_DATETIME_FORMAT(SessionParameter.BROWSER_DATETIME_FORMAT),
-        LOCAL_FACTORY(SessionParameter.LOCAL_FACTORY),
-        AUTHENTICATION_PROVIDER_CLASS(SessionParameter.AUTHENTICATION_PROVIDER_CLASS),
-        AUTH_HTTP_BASIC(SessionParameter.AUTH_HTTP_BASIC),
-        AUTH_HTTP_BASIC_CHARSET(SessionParameter.AUTH_HTTP_BASIC_CHARSET),
-        AUTH_OAUTH_BEARER(SessionParameter.AUTH_OAUTH_BEARER),
-        AUTH_SOAP_USERNAMETOKEN(SessionParameter.AUTH_SOAP_USERNAMETOKEN),
-        OAUTH_CLIENT_ID(SessionParameter.OAUTH_CLIENT_ID),
-        OAUTH_CLIENT_SECRET(SessionParameter.OAUTH_CLIENT_SECRET),
-        OAUTH_CODE(SessionParameter.OAUTH_CODE),
-        OAUTH_TOKEN_ENDPOINT(SessionParameter.OAUTH_TOKEN_ENDPOINT),
-        OAUTH_REDIRECT_URI(SessionParameter.OAUTH_REDIRECT_URI),
-        OAUTH_ACCESS_TOKEN(SessionParameter.OAUTH_ACCESS_TOKEN),
-        OAUTH_REFRESH_TOKEN(SessionParameter.OAUTH_REFRESH_TOKEN),
-        OAUTH_EXPIRATION_TIMESTAMP(SessionParameter.OAUTH_EXPIRATION_TIMESTAMP),
-        OAUTH_DEFAULT_TOKEN_LIFETIME(SessionParameter.OAUTH_DEFAULT_TOKEN_LIFETIME),
-        CLIENT_CERT_KEYFILE(SessionParameter.CLIENT_CERT_KEYFILE),
-        CLIENT_CERT_PASSPHRASE(SessionParameter.CLIENT_CERT_PASSPHRASE),
-        HTTP_INVOKER_CLASS(SessionParameter.HTTP_INVOKER_CLASS),
-        COMPRESSION(SessionParameter.COMPRESSION),
-        CLIENT_COMPRESSION(SessionParameter.CLIENT_COMPRESSION),
-        COOKIES(SessionParameter.COOKIES),
-        HEADER(SessionParameter.HEADER),
-        CONNECT_TIMEOUT(SessionParameter.CONNECT_TIMEOUT),
-        READ_TIMEOUT(SessionParameter.READ_TIMEOUT),
-        PROXY_USER(SessionParameter.PROXY_USER),
-        PROXY_PASSWORD(SessionParameter.PROXY_PASSWORD),
-        CSRF_HEADER(SessionParameter.CSRF_HEADER),
-        USER_AGENT(SessionParameter.USER_AGENT),
-        CACHE_SIZE_OBJECTS(SessionParameter.CACHE_SIZE_OBJECTS),
-        CACHE_TTL_OBJECTS(SessionParameter.CACHE_TTL_OBJECTS),
-        CACHE_SIZE_PATHTOID(SessionParameter.CACHE_SIZE_PATHTOID),
-        CACHE_TTL_PATHTOID(SessionParameter.CACHE_TTL_PATHTOID),
-        CACHE_PATH_OMIT(SessionParameter.CACHE_PATH_OMIT),
-        CACHE_SIZE_REPOSITORIES(SessionParameter.CACHE_SIZE_REPOSITORIES),
-        CACHE_SIZE_TYPES(SessionParameter.CACHE_SIZE_TYPES),
-        CACHE_SIZE_LINKS(SessionParameter.CACHE_SIZE_LINKS),
-        LOCALE_ISO639_LANGUAGE(SessionParameter.LOCALE_ISO639_LANGUAGE),
-        LOCALE_ISO3166_COUNTRY(SessionParameter.LOCALE_ISO3166_COUNTRY),
-        LOCALE_VARIANT(SessionParameter.LOCALE_VARIANT),
-        OBJECT_FACTORY_CLASS(SessionParameter.OBJECT_FACTORY_CLASS),
-        CACHE_CLASS(SessionParameter.CACHE_CLASS),
-        TYPE_DEFINITION_CACHE_CLASS(SessionParameter.TYPE_DEFINITION_CACHE_CLASS),
-        REPOSITORY_ID(SessionParameter.REPOSITORY_ID),
-        INCLUDE_OBJECTID_URL_PARAM_ON_CHECKOUT(SessionParameter.INCLUDE_OBJECTID_URL_PARAM_ON_CHECKOUT),
-        INCLUDE_OBJECTID_URL_PARAM_ON_MOVE(SessionParameter.INCLUDE_OBJECTID_URL_PARAM_ON_MOVE),
-        OMIT_CHANGE_TOKENS(SessionParameter.OMIT_CHANGE_TOKENS),
-        ADD_NAME_ON_CHECK_IN(SessionParameter.ADD_NAME_ON_CHECK_IN),
-        LATEST_VERSION_WITH_VERSION_SERIES_ID(SessionParameter.LATEST_VERSION_WITH_VERSION_SERIES_ID);
-
-        private final String value;
-
-        CMISSessionParameter(String value) {
-            this.value = value;
-        }
-
-        public String value() {
-            return value;
-        }
-
-    }
 }
