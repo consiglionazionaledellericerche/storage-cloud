@@ -1,3 +1,8 @@
 # Created by .ignore support plugin (hsz.mobi)
 /.idea/
 *.iml
+/storage-cloud-azure/target/
+/storage-cloud-cmis/target/
+/storage-cloud-commons/target/
+/storage-cloud-filesystem/target/
+/storage-cloud-s3/target/
