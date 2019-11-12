@@ -22,6 +22,7 @@
         <module>storage-cloud-cmis</module>
         <module>storage-cloud-s3</module>
         <module>storage-cloud-azure</module>
+        <module>storage-cloud-filesystem</module>
     </modules>
     <scm>
         <connection>scm:git:ssh://git@git.si.cnr.it/dev/storage-cloud.git</connection>
