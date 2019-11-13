@@ -184,7 +184,7 @@ public class FilesystemStorageService implements StorageService{
 
         metadata.put(StoragePropertyNames.ID.value(), String.valueOf(path));
 
-        String propsFileName =  Files.isDirectory(path) ? "dir.properties" : path + ".properties";
+        String propsFileName =  Files.isDirectory(path) ? path + "/dir.properties" : path + ".properties";
         OutputStream output = new FileOutputStream(propsFileName);
         Properties prop = new Properties();
         metadata.forEach((k, v) -> {
