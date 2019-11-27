@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Created by mtrycz on 08/11/2019
@@ -95,11 +96,28 @@ public class FilesystemStorageService implements StorageService{
     @Override
     public void updateProperties(StorageObject storageObject, Map<String, Object> metadataProperties) {
 
+        String path = storageObject.getPath();
+        try {
+            saveMetadata(path, metadataProperties);
+        } catch (IOException e) {
+            throw new StorageException(StorageException.Type.GENERIC, "Unable to update metadata for file "+ path, e);
+        }
     }
 
     @Override
     public StorageObject updateStream(String key, InputStream inputStream, String contentType) {
-        return null;
+
+        try {
+            Files.copy(inputStream, preparePath(key));
+            inputStream.close();
+
+            Map<String, Object> metadata = getMetadata(key);
+            metadata.put("contentType", contentType);
+            saveMetadata(key, metadata);
+        } catch (IOException e) {
+            throw new StorageException(StorageException.Type.GENERIC, "Unable to update content for file "+ key, e);
+        }
+        return getObject(key); // TODO
     }
 
     @Override
@@ -113,17 +131,28 @@ public class FilesystemStorageService implements StorageService{
 
     @Override
     public InputStream getInputStream(String key, String versionId) {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public InputStream getInputStream(String key, Boolean majorVersion) {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public Boolean delete(String id) {
-        return null;
+        try {
+            if( Files.isDirectory(preparePath(id)) )
+                Files.deleteIfExists(preparePath(id + "/dir.properties"));
+            else
+                Files.deleteIfExists(preparePath(id+".properties"));
+
+            Files.deleteIfExists(preparePath(id));
+
+            return true;
+        } catch (IOException e) {
+            throw new StorageException(StorageException.Type.GENERIC, "Unable to delete "+ id, e);
+        }
     }
 
     @Override
@@ -156,47 +185,55 @@ public class FilesystemStorageService implements StorageService{
 
     @Override
     public List<StorageObject> getChildren(String key) {
-        return null;
+        try {
+            Stream<Path> contents = Files.list(preparePath(key));
+            return contents.filter(p -> !p.endsWith(".properties"))
+                    .map(p -> getObject(p.toString()))
+                    .collect(Collectors.toList());
+
+        } catch (IOException e) {
+            throw new StorageException(StorageException.Type.GENERIC, e);
+        }
     }
 
     @Override
     public List<StorageObject> getChildren(String key, int depth) {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public List<StorageObject> search(String query) {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public String signDocuments(String json, String url) {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public void copyNode(StorageObject source, StorageObject target) {
-
+        throw new NotImplementedException();
     }
 
     @Override
     public void managePermission(StorageObject storageObject, Map<String, ACLType> permission, boolean remove) {
-
+        throw new NotImplementedException();
     }
 
     @Override
     public void setInheritedPermission(StorageObject storageObject, Boolean inherited) {
-
+        throw new NotImplementedException();
     }
 
     @Override
     public List<StorageObject> getRelationship(String key, String relationshipName, boolean fromTarget) {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
     public void createRelationship(String source, String target, String relationshipName) {
-
+        throw new NotImplementedException();
     }
 
     @Override
