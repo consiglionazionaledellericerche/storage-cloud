@@ -47,12 +47,12 @@ public class FilesystemStorageService implements StorageService{
 
     @Override
     public StorageObject createFolder(String path, String name, Map<String, Object> metadata) {
-        String relativePathName = path + name;
-        Path absolutePath = preparePath(relativePathName);
+        Path relativePath = Paths.get(path, name);
+        Path absolutePath = preparePath(relativePath);
         try {
             Files.createDirectories( absolutePath );
-            saveMetadata(relativePathName, metadata);
-            return new StorageObject(relativePathName, relativePathName, metadata);
+            saveMetadata(relativePath.toString(), metadata);
+            return new StorageObject(relativePath.toString(), relativePath.toString(), metadata);
 
         } catch (IOException e) {
             throw new StorageException(StorageException.Type.GENERIC, "Unable to create directory "+ absolutePath, e);
@@ -220,6 +220,7 @@ public class FilesystemStorageService implements StorageService{
                     value = "";
                 } else if (v instanceof List) {
                     value = ((List) v).stream().collect(Collectors.joining(","));
+                    value = "[" + value + "]";
                 } else
                     value = v;
                 prop.put(k, value);
@@ -235,7 +236,16 @@ public class FilesystemStorageService implements StorageService{
         InputStream input = new FileInputStream(propsPath.toString());
         Properties prop = new Properties();
         prop.load(input);
-        return prop.entrySet().stream().collect(
+        return prop.entrySet().stream()
+                .map(e -> {
+                    String s = e.getValue().toString();
+                    if (s.startsWith("[")) {
+                        s = s.substring(1, s.length() - 1);
+                        e.setValue(Arrays.asList(s.split(",")));
+                    }
+                    return e;
+                })
+                .collect(
                 Collectors.toMap(
                         e -> e.getKey().toString(),
                         e -> e.getValue().toString()
