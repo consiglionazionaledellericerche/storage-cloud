@@ -1,5 +1,6 @@
 package it.cnr.si.spring.storage;
 
+import it.cnr.si.spring.storage.bulk.StorageFile;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -94,4 +95,36 @@ public class FilesystemStorageTest {
 
     }
 
+    @Test
+    public void testRestoreSimpleDocument() {
+        String pippo = "pippo";
+        InputStream is = new ByteArrayInputStream(pippo.getBytes());
+
+        StorageFile file = new StorageFile(is,
+                "text/plain",
+                "titolo");
+
+        StorageObject so = storeService.restoreSimpleDocument(
+                file,
+                new ByteArrayInputStream(file.getBytes()),
+                "text/plain",
+                "Titolo",
+                "/",
+                true);
+
+        log.info("{}", so);
+        StorageObject quattro = storeService.getStorageObjectByPath(so.getPath());
+
+        log.info("{}", quattro);
+
+        assertEquals(so.getPath(), quattro.getPath());
+        assertEquals(so.getKey(), quattro.getKey());
+
+        InputStream content = storeService.getResource(so.getKey());
+        String contentString = new Scanner(content).next();
+
+        log.info("{}", contentString);
+
+        assertEquals(pippo, contentString);
+    }
 }
