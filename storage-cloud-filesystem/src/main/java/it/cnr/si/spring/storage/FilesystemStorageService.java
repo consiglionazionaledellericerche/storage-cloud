@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import javax.annotation.PostConstruct;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,24 +30,32 @@ public class FilesystemStorageService implements StorageService{
     @Value("${cnr.filesystem.directory}")
     private String directory;
 
+    private Path basePath;
+
     @Override
+    @PostConstruct
     public void init() {
         try {
-            Files.createDirectories(Paths.get(directory));
+            this.basePath = Paths.get(directory);
+            Files.createDirectories(basePath);
+            saveMetadata("/", new HashMap<>());
+
         } catch (IOException e) {
-            throw new StorageException(StorageException.Type.GENERIC, "Init: unable to create base storage directory "+ directory, e);
+            throw new StorageException(StorageException.Type.GENERIC, "Init: unable to create base storage directory "+ basePath, e);
         }
     }
 
     @Override
     public StorageObject createFolder(String path, String name, Map<String, Object> metadata) {
-        Path p = Paths.get(directory, path, name);
+        String relativePathName = path + name;
+        Path absolutePath = preparePath(relativePathName);
         try {
-            Files.createDirectories(p);
-            saveMetadata(p, metadata);
-            return new StorageObject(p.toString(), p.toString(), metadata);
+            Files.createDirectories( absolutePath );
+            saveMetadata(relativePathName, metadata);
+            return new StorageObject(relativePathName, relativePathName, metadata);
+
         } catch (IOException e) {
-            throw new StorageException(StorageException.Type.GENERIC, "Unable to create directory "+ p, e);
+            throw new StorageException(StorageException.Type.GENERIC, "Unable to create directory "+ absolutePath, e);
         }
     }
 
@@ -64,20 +73,22 @@ public class FilesystemStorageService implements StorageService{
         if (permissions.length > 0)
             LOGGER.debug("Filesystem storage is meant for testing only. Permission logic is ignored");
 
+        metadataProperties.put("contentType", contentType);
+
         String filename = UUID.randomUUID().toString();
-        Path p = Paths.get(
-                parentObject == null ? parentObject.getPath() : directory + path,
+        Path relativePath = Paths.get(
+                parentObject == null ? parentObject.getPath() : path,
                 filename);
 
         try {
 
-            Files.copy(inputStream, p);
+            Files.copy( inputStream, preparePath(relativePath) );
             inputStream.close();
 
-            saveMetadata(p, metadataProperties);
-            return new StorageObject(p.toString(), p.toString(), metadataProperties);
+            saveMetadata(relativePath.toString(), metadataProperties);
+            return new StorageObject(relativePath.toString(), relativePath.toString(), metadataProperties);
         } catch (IOException e) {
-            throw new StorageException(StorageException.Type.GENERIC, "Unable to create file "+ p, e);
+            throw new StorageException(StorageException.Type.GENERIC, "Unable to create file "+ relativePath, e);
         }
     }
 
@@ -94,7 +105,7 @@ public class FilesystemStorageService implements StorageService{
     @Override
     public InputStream getInputStream(String name) {
         try {
-            return Files.newInputStream(Paths.get(name));
+            return Files.newInputStream( preparePath(name) );
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -116,9 +127,22 @@ public class FilesystemStorageService implements StorageService{
     }
 
     @Override
-    public StorageObject getObject(String id) {
-        throw new NotImplementedException();
+    public StorageObject getObject(String key) {
+        try {
+            Path p = preparePath(key);
+            if (Files.exists(p)) {
+                Map<String, Object> metadata = getMetadata(key);
+                StorageObject so = new StorageObject(key, key, metadata);
+
+                return so;
+            } else
+                return null;
+        } catch (IOException e) {
+            throw new StorageException(StorageException.Type.GENERIC, e);
+        }
     }
+
+
 
     @Override
     public StorageObject getObject(String id, UsernamePasswordCredentials customCredentials) {
@@ -127,7 +151,7 @@ public class FilesystemStorageService implements StorageService{
 
     @Override
     public StorageObject getObjectByPath(String path, boolean isFolder) {
-        return null;
+        return getObject(path);
     }
 
     @Override
@@ -180,12 +204,15 @@ public class FilesystemStorageService implements StorageService{
         return StoreType.FILESYSTEM;
     }
 
-    private void saveMetadata(Path path, Map<String, Object> metadata) throws IOException {
-
+    private void saveMetadata(String path, Map<String, Object> metadata) throws IOException {
         metadata.put(StoragePropertyNames.ID.value(), String.valueOf(path));
 
-        String propsFileName =  Files.isDirectory(path) ? path + "/dir.properties" : path + ".properties";
-        OutputStream output = new FileOutputStream(propsFileName);
+        Path originalPath = preparePath(path);
+        Path propsPath =  Files.isDirectory( originalPath ) ?
+                originalPath.resolve("dir.properties") :
+                Paths.get(preparePath(path) + ".properties");
+
+        OutputStream output = new FileOutputStream(propsPath.toString());
         Properties prop = new Properties();
         metadata.forEach((k, v) -> {
                 Object value;
@@ -201,9 +228,11 @@ public class FilesystemStorageService implements StorageService{
     }
 
     private Map<String, Object> getMetadata(String path) throws IOException {
-
-        String propsFileName =  Files.isDirectory(Paths.get(path)) ? "dir.properties" : path + ".properties";
-        InputStream input = new FileInputStream(propsFileName);
+        Path originalPath = preparePath(path);
+        Path propsPath =  Files.isDirectory( originalPath ) ?
+                originalPath.resolve("dir.properties") :
+                Paths.get(preparePath(path) + ".properties");
+        InputStream input = new FileInputStream(propsPath.toString());
         Properties prop = new Properties();
         prop.load(input);
         return prop.entrySet().stream().collect(
@@ -212,5 +241,15 @@ public class FilesystemStorageService implements StorageService{
                         e -> e.getValue().toString()
                 )
         );
+    }
+
+    private Path preparePath(String relative) {
+        relative = relative == null ? "" : relative;
+        relative = relative.startsWith("/") ? relative.substring(1) : relative;
+        return basePath.resolve(Paths.get(relative));
+    }
+
+    private Path preparePath(Path relative) {
+        return preparePath(relative.toString());
     }
 }
