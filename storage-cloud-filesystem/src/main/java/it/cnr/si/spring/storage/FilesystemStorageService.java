@@ -12,9 +12,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.annotation.PostConstruct;
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -24,7 +22,7 @@ import java.util.stream.Stream;
  */
 
 @Service
-public class FilesystemStorageService implements StorageService{
+public class FilesystemStorageService implements StorageService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FilesystemStorageService.class);
 
@@ -107,8 +105,11 @@ public class FilesystemStorageService implements StorageService{
     @Override
     public StorageObject updateStream(String key, InputStream inputStream, String contentType) {
 
+        if ( !Files.exists(preparePath(key)) )
+            throw new StorageException(StorageException.Type.NOT_FOUND, "Resource does not exist "+ key);
+
         try {
-            Files.copy(inputStream, preparePath(key));
+            Files.copy(inputStream, preparePath(key), StandardCopyOption.REPLACE_EXISTING);
             inputStream.close();
 
             Map<String, Object> metadata = getMetadata(key);
@@ -142,14 +143,17 @@ public class FilesystemStorageService implements StorageService{
     @Override
     public Boolean delete(String id) {
         try {
-            if( Files.isDirectory(preparePath(id)) )
-                Files.deleteIfExists(preparePath(id + "/dir.properties"));
-            else
-                Files.deleteIfExists(preparePath(id+".properties"));
+//            if( Files.isDirectory(preparePath(id)) )
+//                Files.deleteIfExists(preparePath(id + "/dir.properties"));
+//            else
+//                Files.deleteIfExists(preparePath(id+".properties"));
+            Files.walk(preparePath(id))
+                    .sorted(Comparator.reverseOrder())
+                    .map(Path::toFile)
+                    .forEach(File::delete);
+//            return Files.deleteIfExists(preparePath(id));
+            return !Files.exists(preparePath(id));
 
-            Files.deleteIfExists(preparePath(id));
-
-            return true;
         } catch (IOException e) {
             throw new StorageException(StorageException.Type.GENERIC, "Unable to delete "+ id, e);
         }
