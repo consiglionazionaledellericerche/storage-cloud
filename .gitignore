@@ -2,3 +2,8 @@
 /.idea/
 *.iml
 target
+/storage-cloud-azure/target/
+/storage-cloud-cmis/target/
+/storage-cloud-commons/target/
+/storage-cloud-filesystem/target/
+/storage-cloud-s3/target/
