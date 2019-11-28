@@ -215,7 +215,7 @@ public interface StorageService {
     }
 
     enum StoreType {
-        CMIS, S3, AZURE
+        CMIS, S3, AZURE, FILESYSTEM
     }
 
     enum ACLType {
