@@ -2,18 +2,24 @@ package it.cnr.si.spring.storage;
 
 import it.cnr.si.spring.storage.bulk.StorageFile;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.awt.*;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -29,6 +35,16 @@ public class FilesystemStorageTest {
 
     @Autowired
     private StoreService storeService;
+    @Autowired
+    private StorageService storageService;
+
+    private static final String PIPPO = "pippo",
+                                PLUTO = "pluto";
+
+    @Test
+    public void testCorrectStorType() {
+        assertEquals(StorageService.StoreType.FILESYSTEM, storageService.getStoreType());
+    }
 
     @Test
     public void testCreateAndReadDirectoryAndMetadata() {
@@ -67,8 +83,7 @@ public class FilesystemStorageTest {
 
     @Test
     public void testCreateAndReadSimpleDocumentAndMetadata() {
-        String pippo = "pippo";
-        InputStream is = new ByteArrayInputStream(pippo.getBytes());
+        InputStream is = new ByteArrayInputStream(PIPPO.getBytes());
         String contentType = "text/plain";
         String path = "/";
         Map<String, Object> metadata = new HashMap<>();
@@ -91,26 +106,14 @@ public class FilesystemStorageTest {
 
         log.info("{}", contentString);
 
-        assertEquals(pippo, contentString);
+        assertEquals(PIPPO, contentString);
 
     }
 
     @Test
     public void testRestoreSimpleDocument() {
-        String pippo = "pippo";
-        InputStream is = new ByteArrayInputStream(pippo.getBytes());
 
-        StorageFile file = new StorageFile(is,
-                "text/plain",
-                "titolo");
-
-        StorageObject so = storeService.restoreSimpleDocument(
-                file,
-                new ByteArrayInputStream(file.getBytes()),
-                "text/plain",
-                "Titolo",
-                "/",
-                true);
+        StorageObject so = createFile();
 
         log.info("{}", so);
         StorageObject quattro = storeService.getStorageObjectByPath(so.getPath());
@@ -125,6 +128,120 @@ public class FilesystemStorageTest {
 
         log.info("{}", contentString);
 
-        assertEquals(pippo, contentString);
+        assertEquals(PIPPO, contentString);
     }
+
+    @Test
+    public void testUpdateProperties() {
+
+        StorageObject so = createFile();
+
+        so = storeService.getStorageObjectBykey(so.getKey());
+
+        assertNull(so.getPropertyValue("pluto"));
+
+        Map<String, Object> newProperties = new HashMap<>();
+        newProperties.put("pluto", "paperino");
+        storeService.updateProperties(newProperties, so);
+
+        so = storeService.getStorageObjectBykey(so.getKey());
+
+        assertEquals("paperino", so.getPropertyValue("pluto"));
+
+    }
+
+    @Test
+    public void testUpdateStream() {
+
+        StorageObject so = createFile();
+
+        so = storeService.getStorageObjectBykey(so.getKey());
+        InputStream content = storeService.getResource(so.getKey());
+        String contentString = new Scanner(content).next();
+
+        assertEquals(PIPPO, contentString);
+
+        InputStream is = new ByteArrayInputStream(PLUTO.getBytes());
+        storeService.updateStream(so.getKey(), is, "text/plain");
+
+        so = storeService.getStorageObjectBykey(so.getKey());
+        content = storeService.getResource(so.getKey());
+        contentString = new Scanner(content).next();
+
+        assertEquals(PLUTO, contentString);
+
+        try {
+            storeService.updateStream("key-non-esistente", is, "text/plain");
+            fail("File should not be updated because it should not exist");
+        } catch (StorageException e) {
+            assertEquals(StorageException.Type.NOT_FOUND, e.getType());
+        }
+    }
+
+    @Test
+    public void testDeleteFile() {
+
+        StorageObject so = createFile();
+
+        so = storeService.getStorageObjectBykey(so.getKey());
+        assertTrue( storeService.delete(so.getKey()) );
+        assertNull( storeService.getStorageObjectBykey(so.getKey()) );
+
+    }
+
+    @Test
+    public void testDeleteEmptyDirectory() {
+
+        String folder = storeService.createFolderIfNotPresent("/",
+                "deleteme",
+                "Da Cancellare",
+                "Questo Folder esiste solo per essere cancellato");
+
+        StorageObject so = storeService.getStorageObjectBykey(folder);
+        assertEquals("Da Cancellare", so.getPropertyValue("cm:title"));
+
+        assertTrue( storeService.delete(folder) );
+        assertNull( storeService.getStorageObjectBykey(folder) );
+
+    }
+
+    @Test
+    public void testDeleteNonEmptyDirectory() {
+
+        String folder = storeService.createFolderIfNotPresent("/",
+                "parent",
+                "Superiore",
+                "Questo Folder esiste solo per contenerne un'altro");
+
+        String subfolder = storeService.createFolderIfNotPresent(folder,
+                "child",
+                "Sub",
+                "Questo Folder esiste solo per essere contenuto");
+
+        StorageObject so = storeService.getStorageObjectBykey(subfolder);
+
+        assertEquals("Sub", so.getPropertyValue("cm:title"));
+
+        assertTrue(storeService.delete(folder));
+        assertNull( storeService.getStorageObjectBykey(folder) );
+        assertNull( storeService.getStorageObjectBykey(subfolder) );
+
+    }
+
+    private StorageObject createFile() {
+        InputStream is = new ByteArrayInputStream(PIPPO.getBytes());
+
+        StorageFile file = new StorageFile(is,
+                "text/plain",
+                "titolo");
+
+        return storeService.restoreSimpleDocument(
+                file,
+                new ByteArrayInputStream(file.getBytes()),
+                "text/plain",
+                "Titolo",
+                "/",
+                true);
+    }
+
 }
