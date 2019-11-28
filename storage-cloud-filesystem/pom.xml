@@ -4,16 +4,13 @@
     <artifactId>storage-cloud-filesystem</artifactId>
     <parent>
         <artifactId>storage-cloud</artifactId>
-        <groupId>it.cnr.si</groupId>
-        <version>0.0.7-SNAPSHOT</version>
+        <groupId>it.cnr.si.storage</groupId>
+        <version>1.0.6-SNAPSHOT</version>
     </parent>
-
-    <properties>
-    </properties>
 
     <dependencies>
         <dependency>
-            <groupId>it.cnr.si</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>storage-cloud-commons</artifactId>
             <version>${project.version}</version>
         </dependency>
