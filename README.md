@@ -10,6 +10,7 @@
     <li><a href="https://en.wikipedia.org/wiki/Content_Management_Interoperability_Services">CMIS</a></li>
     <li><a href="https://azure.microsoft.com/en-us/services/storage/">AZURE</a></li>
     <li><a href="https://aws.amazon.com/s3/">Amazon S3</a></li>
+    <li>Local filesystem (for test and demo purposes)</li>
 </ol>
 <p align="center">
   <a href="https://github.com/consiglionazionaledellericerche/storage-cloud/blob/master/LICENSE">
@@ -28,7 +29,7 @@
 |[AZURE](https://mvnrepository.com/artifact/com.microsoft.azure/azure-storage) | ![Maven Central](https://img.shields.io/maven-central/v/com.microsoft.azure/azure-storage/5.3.1.svg)|
 |[AMAZON S3](https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-s3) | ![Maven Central](https://img.shields.io/maven-central/v/com.amazonaws/aws-java-sdk-s3/1.11.84.svg)|
 
-```bash
+```java
     InputStream is = IOUtils.toInputStream(TEXT, Charset.defaultCharset());
     Map<String, Object> map = new HashMap();
     map.put(StoragePropertyNames.NAME.value(), "test-file");
@@ -37,6 +38,7 @@
     map.put(CM_TITLE, TITLE);
     map.put(CM_DESCRIPTION, DESCRIPTION);
     StorageObject document = storeService.storeSimpleDocument(is, "text/plain", "/", map);
+
     InputStream iss = storeService.getResource(document.getKey());
     assertEquals(TEXT, IOUtils.toString(iss, Charset.defaultCharset()));
     assertEquals(TITLE, document.getPropertyValue(CM_TITLE));
@@ -52,7 +54,7 @@
 
 ## 👏 How to Contribute
 
-The main purpose of this repository is to continue evolving cool-jconon. We want to make contributing to this project as easy and transparent as possible, and we are grateful to the community for contributing bugfixes and improvements.
+The main purpose of this repository is to continue evolving storage-cloud. We want to make contributing to this project as easy and transparent as possible, and we are grateful to the community for contributing bugfixes and improvements.
 
 ## 📄 License
 
