@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2019  Consiglio Nazionale delle Ricerche
+ *
+ *     This program is free software: you can redistribute it and/or modify
+ *     it under the terms of the GNU Affero General Public License as
+ *     published by the Free Software Foundation, either version 3 of the
+ *     License, or (at your option) any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU Affero General Public License for more details.
+ *
+ *     You should have received a copy of the GNU Affero General Public License
+ *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package it.cnr.si.spring.storage.config;
 
 import it.cnr.si.spring.storage.MimeTypes;
@@ -5,7 +22,6 @@ import it.cnr.si.spring.storage.StorageException;
 import it.cnr.si.spring.storage.StorageObject;
 import it.cnr.si.spring.storage.StorageService;
 import org.apache.chemistry.opencmis.client.api.*;
-import org.apache.chemistry.opencmis.client.bindings.CmisBindingFactory;
 import org.apache.chemistry.opencmis.client.bindings.impl.CmisBindingsHelper;
 import org.apache.chemistry.opencmis.client.bindings.impl.SessionImpl;
 import org.apache.chemistry.opencmis.client.bindings.spi.AbstractAuthenticationProvider;
@@ -36,7 +52,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 
+import javax.annotation.PostConstruct;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -44,36 +62,33 @@ import java.io.StringReader;
 import java.math.BigInteger;
 import java.net.URISyntaxException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Created by mspasiano on 6/15/17.
  */
 @Configuration
+@PropertySource("classpath:META-INF/spring/cmis.properties")
 public class CMISStorageConfiguration {
 
     private static final Logger logger = LoggerFactory.getLogger(CMISStorageConfiguration.class);
+    private static final String REPOSITORY_BASE_URL = "repository.base.url";
 
-    @Value("${org.apache.chemistry.opencmis.binding.atompub.url}")
-    private String ATOMPUB_URL;
-    @Value("${org.apache.chemistry.opencmis.binding.browser.url}")
-    private String BROWSER_URL;
+    @Value("#{${cmis.parameters}}")
+    private Map<String, String> sessionParameters;
 
-    @Value("${org.apache.chemistry.opencmis.binding.spi.type}")
-    private String BINDING_TYPE;
-    @Value("${org.apache.chemistry.opencmis.binding.connecttimeout}")
-    private String CONNECT_TIMEOUT;
-    @Value("${org.apache.chemistry.opencmis.binding.readtimeout}")
-    private String READ_TIMEOUT;
-    @Value("${org.apache.chemistry.opencmis.binding.httpinvoker.classname}")
-    private String HTTP_INVOKER_CLASS;
-
-    @Value("${repository.base.url}")
-    private String baseURL;
-
-    @Value("${user.admin.username}")
-    private String adminUserName;
-    @Value("${user.admin.password}")
-    private String adminPassword;
+    @PostConstruct
+    public void parameters() {
+        /**
+         * Removal of all non-valued parameters
+         */
+        sessionParameters = sessionParameters
+                .entrySet()
+                .stream()
+                .filter(stringStringEntry -> !stringStringEntry.getValue().equals("${".concat(stringStringEntry.getKey()).concat("}")))
+                .collect(Collectors.toMap(x -> x.getKey(), x -> x.getValue()));
+        logger.debug(sessionParameters.toString());
+    }
 
     @Bean
     public StorageService storageService() {
@@ -94,27 +109,15 @@ public class CMISStorageConfiguration {
             }
 
             public Session createSession() {
-                return createSession(adminUserName, adminPassword);
+                return createSession(
+                        sessionParameters.get(SessionParameter.USER),
+                        sessionParameters.get(SessionParameter.PASSWORD)
+                );
             }
 
-            public Session createSession(String userName, String password) {
+            private Session createSession(String userName, String password) {
                 SessionFactory sessionFactory = SessionFactoryImpl.newInstance();
-                Map<String, String> sessionParameters = new HashMap<String, String>();
-                sessionParameters.put(SessionParameter.ATOMPUB_URL, ATOMPUB_URL);
-                sessionParameters.put(SessionParameter.BROWSER_URL, BROWSER_URL);
-                sessionParameters.put(SessionParameter.BINDING_TYPE, BINDING_TYPE);
-                sessionParameters.put(SessionParameter.CONNECT_TIMEOUT, CONNECT_TIMEOUT);
-                sessionParameters.put(SessionParameter.READ_TIMEOUT, READ_TIMEOUT);
-                sessionParameters.put(SessionParameter.HTTP_INVOKER_CLASS, HTTP_INVOKER_CLASS);
-                sessionParameters.put(SessionParameter.USER, userName);
-                sessionParameters.put(SessionParameter.PASSWORD, password);
 
-                sessionParameters.put(SessionParameter.CONNECT_TIMEOUT, "10000");
-                sessionParameters.put(SessionParameter.REPOSITORY_ID, sessionFactory.getRepositories(sessionParameters).get(0).getId());
-                sessionParameters.put(SessionParameter.LOCALE_ISO3166_COUNTRY, Locale.ITALY.getCountry());
-                sessionParameters.put(SessionParameter.LOCALE_ISO639_LANGUAGE, Locale.ITALY.getLanguage());
-                sessionParameters.put(SessionParameter.LOCALE_VARIANT, Locale.ITALY.getVariant());
-                sessionParameters.put(SessionParameter.CACHE_PATH_OMIT, String.valueOf(Boolean.TRUE));
                 Session session = sessionFactory.createSession(sessionParameters);
                 OperationContext operationContext = OperationContextUtils.createOperationContext();
                 operationContext.setMaxItemsPerPage(Integer.MAX_VALUE);
@@ -128,21 +131,6 @@ public class CMISStorageConfiguration {
 
             public void createBindingSession() {
                 BindingSession session = new SessionImpl();
-                Map<String, String> sessionParameters = new HashMap<String, String>();
-                sessionParameters.put(SessionParameter.ATOMPUB_URL, ATOMPUB_URL);
-                sessionParameters.put(SessionParameter.BROWSER_URL, BROWSER_URL);
-                sessionParameters.put(SessionParameter.BINDING_TYPE, BINDING_TYPE);
-                sessionParameters.put(SessionParameter.CONNECT_TIMEOUT, CONNECT_TIMEOUT);
-                sessionParameters.put(SessionParameter.READ_TIMEOUT, READ_TIMEOUT);
-                sessionParameters.put(SessionParameter.HTTP_INVOKER_CLASS, HTTP_INVOKER_CLASS);
-                sessionParameters.put(SessionParameter.USER, adminUserName);
-                sessionParameters.put(SessionParameter.PASSWORD, adminPassword);
-                if (!sessionParameters.containsKey(SessionParameter.AUTHENTICATION_PROVIDER_CLASS)) {
-                    sessionParameters.put(SessionParameter.AUTHENTICATION_PROVIDER_CLASS, CmisBindingFactory.STANDARD_AUTHENTICATION_PROVIDER);
-                }
-                sessionParameters.put(SessionParameter.AUTH_HTTP_BASIC, "true");
-                sessionParameters.put(SessionParameter.AUTH_SOAP_USERNAMETOKEN, "false");
-                sessionParameters.put(SessionParameter.CACHE_PATH_OMIT, String.valueOf(Boolean.TRUE));
                 for (Map.Entry<String, String> entry : sessionParameters.entrySet()) {
                     session.put(entry.getKey(), entry.getValue());
                 }
@@ -171,7 +159,7 @@ public class CMISStorageConfiguration {
 
             public void addAutoVersion(Document doc,
                                        final boolean autoVersionOnUpdateProps) throws StorageException {
-                String link = baseURL.concat(
+                String link = sessionParameters.get(REPOSITORY_BASE_URL).concat(
                         "service/api/metadata/node/");
                 link = link.concat(doc.getProperty(StoragePropertyNames.ALFCMIS_NODEREF.value()).getValueAsString().replace(":/", ""));
                 UrlBuilder url = new UrlBuilder(link);
@@ -211,10 +199,8 @@ public class CMISStorageConfiguration {
                 } else {
                     return Optional.ofNullable(cmisObject)
                             .map(Document.class::cast)
-                            .map(document1 -> document1.<String>getPropertyValue(PropertyIds.PARENT_ID))
-                            .map(parentId -> siglaSession.getObject(parentId))
-                            .map(Folder.class::cast)
-                            .map(folder -> folder.getPath().concat(StorageService.SUFFIX).concat(cmisObject.getName()))
+                            .map(document1 -> document1.getPaths())
+                            .map(strings -> String.join(";", strings))
                             .orElse(null);
                 }
             }
@@ -315,11 +301,9 @@ public class CMISStorageConfiguration {
                                             inputStream), true))
                                     .orElse((Document) siglaSession.getObject(key));
                         })
-                        .map(document -> new StorageObject(
-                                document.<String>getPropertyValue(PropertyIds.VERSION_SERIES_ID),
-                                getPath(document),
-                                convertProperties(document.getProperties())
-                        ))
+                        .map(document -> {
+                            return getObject(document.getPropertyValue(PropertyIds.VERSION_SERIES_ID));
+                        })
                         .orElseThrow(() -> new StorageException(StorageException.Type.INVALID_ARGUMENTS, "You must specify key for update stream"));
             }
 
@@ -364,7 +348,7 @@ public class CMISStorageConfiguration {
                         if (cmisObject.get().getBaseTypeId().value().equals(StoragePropertyNames.CMIS_FOLDER.value())) {
                             ((Folder) cmisObject.get()).deleteTree(true, UnfileObject.DELETE, false);
                         } else {
-                            ((Document) cmisObject.get()).delete();
+                            cmisObject.get().delete();
                         }
                     } else {
                         logger.warn("item {} does not exist", id);
@@ -478,7 +462,7 @@ public class CMISStorageConfiguration {
             @Override
             public String signDocuments(String json, String url) {
                 try {
-                    String webScriptURL = baseURL.concat(url);
+                    String webScriptURL = sessionParameters.get(REPOSITORY_BASE_URL).concat(url);
                     UrlBuilder urlBuilder = new UrlBuilder(new URIBuilder(webScriptURL).build().toString());
                     Response response = CmisBindingsHelper.getHttpInvoker(siglaBindingSession).invokePOST(urlBuilder, MimeTypes.JSON.mimetype(),
                             new Output() {
@@ -511,7 +495,7 @@ public class CMISStorageConfiguration {
                         .map(Document.class::cast)
                         .ifPresent(document -> {
                             try {
-                                document.addToFolder((Folder) siglaSession.getObject(target.getKey()), true);
+                                document.addToFolder(siglaSession.getObject(target.getKey()), true);
                             } catch (CmisRuntimeException _ex) {
                                 logger.warn(_ex.getMessage(), _ex);
                             }
@@ -520,7 +504,7 @@ public class CMISStorageConfiguration {
 
             @Override
             public void managePermission(StorageObject storageObject, Map<String, ACLType> permission, boolean remove) {
-                String link = baseURL
+                String link = sessionParameters.get(REPOSITORY_BASE_URL)
                         .concat("service/cnr/nodes/permissions/")
                         .concat(storageObject.<String>getPropertyValue(StoragePropertyNames.ALFCMIS_NODEREF.value()).replace(":/", ""));
                 UrlBuilder url = new UrlBuilder(link);
@@ -554,7 +538,7 @@ public class CMISStorageConfiguration {
 
             @Override
             public void setInheritedPermission(StorageObject storageObject, Boolean inherited) {
-                String link = baseURL
+                String link = sessionParameters.get(REPOSITORY_BASE_URL)
                         .concat("service/cnr/nodes/permissions/")
                         .concat(storageObject.<String>getPropertyValue(StoragePropertyNames.ALFCMIS_NODEREF.value()).replace(":/", ""));
                 UrlBuilder url = new UrlBuilder(link);
@@ -608,4 +592,5 @@ public class CMISStorageConfiguration {
         siglaStorageService.init();
         return siglaStorageService;
     }
+
 }
