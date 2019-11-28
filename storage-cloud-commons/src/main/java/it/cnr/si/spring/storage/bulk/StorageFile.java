@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2019  Consiglio Nazionale delle Ricerche
+ *
+ *     This program is free software: you can redistribute it and/or modify
+ *     it under the terms of the GNU Affero General Public License as
+ *     published by the Free Software Foundation, either version 3 of the
+ *     License, or (at your option) any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU Affero General Public License for more details.
+ *
+ *     You should have received a copy of the GNU Affero General Public License
+ *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package it.cnr.si.spring.storage.bulk;
 
 
@@ -33,7 +50,7 @@ public class StorageFile implements Serializable {
      *
      * @param bytes        the File object on the server which holds the uploaded contents of the file
      * @param contentType  the content type of the file declared by the browser during upload
-     * @param originalName the name of the file as declared by the user&apos;s browser
+     * @param originalName the name of the file as declared by the users browser
      */
     public StorageFile(byte[] bytes, String contentType, String originalName) {
         this.bytes = bytes;
@@ -89,6 +106,8 @@ public class StorageFile implements Serializable {
     /**
      * Returns the name of the file that the user selected and uploaded (this is not necessarily
      * the name that the underlying file is now stored on the server using).
+     *
+     * @return file name
      */
     @StorageProperty(name = "cmis:name")
     public String getFileName() {
@@ -101,6 +120,8 @@ public class StorageFile implements Serializable {
 
     /**
      * Returns the content type of the file that the user selected and uploaded.
+     *
+     * @return content type
      */
     public String getContentType() {
         return contentType;
@@ -112,6 +133,8 @@ public class StorageFile implements Serializable {
 
     /**
      * Gets an input stream to read from the file uploaded
+     *
+     * @return array of byte
      */
     public byte[] getBytes() {
         return bytes;

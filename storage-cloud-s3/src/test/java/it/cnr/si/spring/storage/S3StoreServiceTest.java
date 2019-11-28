@@ -1,8 +1,24 @@
+/*
+ * Copyright (C) 2019  Consiglio Nazionale delle Ricerche
+ *
+ *     This program is free software: you can redistribute it and/or modify
+ *     it under the terms of the GNU Affero General Public License as
+ *     published by the Free Software Foundation, either version 3 of the
+ *     License, or (at your option) any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU Affero General Public License for more details.
+ *
+ *     You should have received a copy of the GNU Affero General Public License
+ *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package it.cnr.si.spring.storage;
 
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
 import org.apache.commons.io.IOUtils;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,14 +48,13 @@ public class S3StoreServiceTest {
     private StoreService storeService;
 
     @Test
-    @Ignore
     public void testStore() throws IOException {
         InputStream is = IOUtils.toInputStream(TEXT, Charset.defaultCharset());
         Map<String, Object> map = new HashMap();
         map.put(StoragePropertyNames.NAME.value(), "ciaone");
         map.put("email", "francesco@uliana.it");
-//        map.put("titolo", "�COLE POLYTECHNIQUE F�D�RALE DE LAUSANNE EPFL");
-//        map.put("name", "Raffaella Carr�");
+        map.put("titolo", "�COLE POLYTECHNIQUE F�D�RALE DE LAUSANNE EPFL");
+        map.put("name", "Raffaella Carrà");
         StorageObject document = storeService.storeSimpleDocument(is, "text/plain", "/foo", map);
         InputStream iss = storeService.getResource("foo/ciaone");
         assertEquals(TEXT, IOUtils.toString(iss, Charset.defaultCharset()));
@@ -53,7 +68,6 @@ public class S3StoreServiceTest {
     }
 
     @Test
-    @Ignore
     public void testGetAndDelete() throws IOException {
         InputStream is = storeService.getResource("/foo/ciaone");
         assertEquals(TEXT, IOUtils.toString(is, Charset.defaultCharset()));
