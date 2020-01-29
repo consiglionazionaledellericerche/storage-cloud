@@ -106,7 +106,8 @@ public class FilesystemStorageService implements StorageService {
     @Override
     public StorageObject updateStream(String key, InputStream inputStream, String contentType) {
 
-    	Path objectPath = preparePath(Paths.get(key));
+        Path relativePath = Paths.get(key);
+        Path objectPath = preparePath(relativePath);
         if ( !Files.exists(objectPath) )
             throw new StorageException(StorageException.Type.NOT_FOUND, "Resource does not exist "+ key);
 
@@ -114,9 +115,9 @@ public class FilesystemStorageService implements StorageService {
             Files.copy(inputStream, objectPath, StandardCopyOption.REPLACE_EXISTING);
             inputStream.close();
 
-            Map<String, Object> metadata = getMetadata(Paths.get(key));
+            Map<String, Object> metadata = getMetadata(relativePath);
             metadata.put("contentType", contentType);
-            saveMetadata(objectPath, metadata);
+            saveMetadata(relativePath, metadata);
         } catch (IOException e) {
             throw new StorageException(StorageException.Type.GENERIC, "Unable to update content for file "+ key, e);
         }
