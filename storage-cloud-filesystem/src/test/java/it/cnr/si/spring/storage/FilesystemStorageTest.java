@@ -1,31 +1,23 @@
 package it.cnr.si.spring.storage;
 
 import it.cnr.si.spring.storage.bulk.StorageFile;
-import it.cnr.si.spring.storage.config.StoragePropertyNames;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.awt.*;
 import java.io.ByteArrayInputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
+import static it.cnr.si.spring.storage.config.StoragePropertyNames.DESCRIPTION;
+import static it.cnr.si.spring.storage.config.StoragePropertyNames.TITLE;
 import static org.junit.Assert.*;
-import static it.cnr.si.spring.storage.config.StoragePropertyNames.*;
 
 @RunWith(SpringRunner.class)
 @ContextConfiguration("/storage-filesystem-test-context.xml")
