@@ -37,7 +37,7 @@ public class FilesystemStorageService implements StorageService {
         try {
             this.basePath = Paths.get(directory);
             Files.createDirectories(basePath);
-            saveMetadata("/", new HashMap<>());
+            saveMetadata(Paths.get("/"), new HashMap<>());
 
         } catch (IOException e) {
             throw new StorageException(StorageException.Type.GENERIC, "Init: unable to create base storage directory "+ basePath, e);
@@ -46,11 +46,12 @@ public class FilesystemStorageService implements StorageService {
 
     @Override
     public StorageObject createFolder(String path, String name, Map<String, Object> metadata) {
-        Path relativePath = Paths.get(path, name);
+    	String relativePathName = sanitizePathName(path, name);
+        Path relativePath = Paths.get(relativePathName);
         Path absolutePath = preparePath(relativePath);
         try {
             Files.createDirectories( absolutePath );
-            saveMetadata(relativePath.toString(), metadata);
+            saveMetadata(relativePath, metadata);
             return new StorageObject(relativePath.toString(), relativePath.toString(), metadata);
 
         } catch (IOException e) {
@@ -84,7 +85,7 @@ public class FilesystemStorageService implements StorageService {
             Files.copy( inputStream, preparePath(relativePath) );
             inputStream.close();
 
-            saveMetadata(relativePath.toString(), metadataProperties);
+            saveMetadata(relativePath, metadataProperties);
             return new StorageObject(relativePath.toString(), relativePath.toString(), metadataProperties);
         } catch (IOException e) {
             throw new StorageException(StorageException.Type.GENERIC, "Unable to create file "+ relativePath, e);
@@ -96,7 +97,7 @@ public class FilesystemStorageService implements StorageService {
 
         String path = storageObject.getPath();
         try {
-            saveMetadata(path, metadataProperties);
+            saveMetadata(Paths.get(path), metadataProperties);
         } catch (IOException e) {
             throw new StorageException(StorageException.Type.GENERIC, "Unable to update metadata for file "+ path, e);
         }
@@ -105,26 +106,27 @@ public class FilesystemStorageService implements StorageService {
     @Override
     public StorageObject updateStream(String key, InputStream inputStream, String contentType) {
 
-        if ( !Files.exists(preparePath(key)) )
+    	Path objectPath = preparePath(Paths.get(key));
+        if ( !Files.exists(objectPath) )
             throw new StorageException(StorageException.Type.NOT_FOUND, "Resource does not exist "+ key);
 
         try {
-            Files.copy(inputStream, preparePath(key), StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(inputStream, objectPath, StandardCopyOption.REPLACE_EXISTING);
             inputStream.close();
 
-            Map<String, Object> metadata = getMetadata(key);
+            Map<String, Object> metadata = getMetadata(Paths.get(key));
             metadata.put("contentType", contentType);
-            saveMetadata(key, metadata);
+            saveMetadata(objectPath, metadata);
         } catch (IOException e) {
             throw new StorageException(StorageException.Type.GENERIC, "Unable to update content for file "+ key, e);
         }
-        return getObject(key); // TODO
+        return getObject(key); // TODO ???
     }
 
     @Override
     public InputStream getInputStream(String name) {
         try {
-            return Files.newInputStream( preparePath(name) );
+            return Files.newInputStream( preparePath(Paths.get(name)) );
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -147,12 +149,13 @@ public class FilesystemStorageService implements StorageService {
 //                Files.deleteIfExists(preparePath(id + "/dir.properties"));
 //            else
 //                Files.deleteIfExists(preparePath(id+".properties"));
-            Files.walk(preparePath(id))
+            Path objectPath = preparePath(Paths.get(id));
+			Files.walk(objectPath)
                     .sorted(Comparator.reverseOrder())
                     .map(Path::toFile)
                     .forEach(File::delete);
 //            return Files.deleteIfExists(preparePath(id));
-            return !Files.exists(preparePath(id));
+            return !Files.exists(objectPath);
 
         } catch (IOException e) {
             throw new StorageException(StorageException.Type.GENERIC, "Unable to delete "+ id, e);
@@ -162,9 +165,9 @@ public class FilesystemStorageService implements StorageService {
     @Override
     public StorageObject getObject(String key) {
         try {
-            Path p = preparePath(key);
-            if (Files.exists(p)) {
-                Map<String, Object> metadata = getMetadata(key);
+            Path objectPath = preparePath(Paths.get(key));
+            if (Files.exists(objectPath)) {
+                Map<String, Object> metadata = getMetadata(Paths.get(key));
                 StorageObject so = new StorageObject(key, key, metadata);
 
                 return so;
@@ -190,7 +193,7 @@ public class FilesystemStorageService implements StorageService {
     @Override
     public List<StorageObject> getChildren(String key) {
         try {
-            Stream<Path> contents = Files.list(preparePath(key));
+            Stream<Path> contents = Files.list(preparePath(Paths.get(key)));
             return contents.filter(p -> !p.endsWith(".properties"))
                     .map(p -> getObject(p.toString()))
                     .collect(Collectors.toList());
@@ -245,13 +248,13 @@ public class FilesystemStorageService implements StorageService {
         return StoreType.FILESYSTEM;
     }
 
-    private void saveMetadata(String path, Map<String, Object> metadata) throws IOException {
-        metadata.put(StoragePropertyNames.ID.value(), String.valueOf(path));
+    private void saveMetadata(Path relativePath, Map<String, Object> metadata) throws IOException {
+        metadata.put(StoragePropertyNames.ID.value(), relativePath.toString());
 
-        Path originalPath = preparePath(path);
-        Path propsPath =  Files.isDirectory( originalPath ) ?
-                originalPath.resolve("dir.properties") :
-                Paths.get(preparePath(path) + ".properties");
+        Path objectPath = preparePath(relativePath);
+        Path propsPath =  Files.isDirectory( objectPath ) ?
+                objectPath.resolve("dir.properties") :
+                Paths.get(preparePath(relativePath) + ".properties");
 
         OutputStream output = new FileOutputStream(propsPath.toString());
         Properties prop = new Properties();
@@ -269,11 +272,11 @@ public class FilesystemStorageService implements StorageService {
         prop.store(output, null);
     }
 
-    private Map<String, Object> getMetadata(String path) throws IOException {
-        Path originalPath = preparePath(path);
-        Path propsPath =  Files.isDirectory( originalPath ) ?
-                originalPath.resolve("dir.properties") :
-                Paths.get(preparePath(path) + ".properties");
+    private Map<String, Object> getMetadata(Path path) throws IOException {
+        Path objectPath = preparePath(path);
+        Path propsPath =  Files.isDirectory( objectPath ) ?
+                objectPath.resolve("dir.properties") :
+                Paths.get(objectPath + ".properties");
         InputStream input = new FileInputStream(propsPath.toString());
         Properties prop = new Properties();
         prop.load(input);
@@ -294,13 +297,27 @@ public class FilesystemStorageService implements StorageService {
         );
     }
 
-    private Path preparePath(String relative) {
-        relative = relative == null ? "" : relative;
-        relative = relative.startsWith("/") ? relative.substring(1) : relative;
-        return basePath.resolve(Paths.get(relative));
+
+    private String sanitizePathName(String path, String name) {
+    	String relativePathName = path + "/" + name;
+        while (relativePathName.startsWith("/"))
+        	relativePathName = relativePathName.substring(1);
+        return relativePathName;
     }
 
+    /*
+     * Per ogni file e directory voglio salvarli nel prefisso basePath 
+     * settato nelle properties 
+     * (es. /tmp/flows o C:\Users\User\AppData\Local\Temp\flows)
+     * Per prefissare correttamente il path col basePath, prima ho bisogno
+     * di "relativizzarlo" 
+     * (cioe' se il path parte dalla root (es "/" o "C:\") 
+     *  tolgo la root) 
+     */
     private Path preparePath(Path relative) {
-        return preparePath(relative.toString());
+    	if (relative.getRoot() != null)
+    		relative = relative.getRoot().relativize(relative);
+        Path resolved = basePath.resolve(relative);
+		return resolved;
     }
 }
