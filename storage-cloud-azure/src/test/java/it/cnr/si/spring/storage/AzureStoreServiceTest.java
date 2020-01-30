@@ -46,9 +46,9 @@ public class AzureStoreServiceTest {
 
     public static final String TEXT = "hello worlds";
 
-    public static final String FOO = StorageService.SUFFIX + "foo spazio";
+    public static final String FOO = StorageDriver.SUFFIX + "foo spazio";
     public static final String CIAONE = "ciaone";
-    public static final String FOO_CIAONE = FOO + StorageService.SUFFIX + CIAONE;
+    public static final String FOO_CIAONE = FOO + StorageDriver.SUFFIX + CIAONE;
 
     public static final String P_CM_TITLED = "P:cm:titled";
     public static final String TEST_PDF = "test.pdf";

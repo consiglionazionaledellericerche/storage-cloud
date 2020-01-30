@@ -17,7 +17,9 @@
 
 package it.cnr.si.spring.storage.config;
 
+import it.cnr.si.spring.storage.condition.StorageDriverIsAzure;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.Map;
@@ -26,6 +28,7 @@ import java.util.Map;
  * Created by mspasiano on 6/5/17.
  */
 @Configuration
+@Conditional(StorageDriverIsAzure.class)
 public class AzureStorageConfigurationProperties {
 
     @Value("${cnr.azure.connectionString}")

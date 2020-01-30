@@ -8,13 +8,7 @@
 						http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-2.5.xsd">
 
     <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
-        <property name="locations">
-            <list>
-                <value>classpath*:META-INF/spring/*.properties</value>
-                <value>classpath*:repository.properties</value>
-            </list>
-        </property>
-        <property name="ignoreUnresolvablePlaceholders" value="true"/>
+        <property name="locations" value="classpath:application-test.properties"></property>
     </bean>
 
     <context:component-scan base-package="it.cnr.si.spring"/>
