@@ -25,9 +25,11 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import it.cnr.si.spring.storage.condition.StorageDriverIsS3;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.Optional;
@@ -36,6 +38,7 @@ import java.util.Optional;
  * Created by mspasiano on 6/5/17.
  */
 @Configuration
+@Conditional(StorageDriverIsS3.class)
 public class S3StorageConfiguration {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3StorageConfiguration.class);

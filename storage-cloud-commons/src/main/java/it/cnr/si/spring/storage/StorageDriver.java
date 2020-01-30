@@ -29,7 +29,7 @@ import java.util.stream.Stream;
 /**
  * Created by mspasiano on 6/5/17.
  */
-public interface StorageService {
+public interface StorageDriver {
 
 
     String SUFFIX = "/";

@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.ByteArrayInputStream;
@@ -20,7 +21,8 @@ import static it.cnr.si.spring.storage.config.StoragePropertyNames.TITLE;
 import static org.junit.Assert.*;
 
 @RunWith(SpringRunner.class)
-@ContextConfiguration("/storage-filesystem-test-context.xml")
+@ContextConfiguration("classpath:storage-filesystem-test-context.xml")
+//@TestPropertySource("classpath:application-test.properties")
 public class FilesystemStorageTest {
 
     private final Logger log = LoggerFactory.getLogger(FilesystemStorageTest.class);
@@ -28,14 +30,14 @@ public class FilesystemStorageTest {
     @Autowired
     private StoreService storeService;
     @Autowired
-    private StorageService storageService;
+    private StorageDriver storageDriver;
 
     private static final String PIPPO = "pippo",
                                 PLUTO = "pluto";
 
     @Test
     public void testCorrectStorType() {
-        assertEquals(StorageService.StoreType.FILESYSTEM, storageService.getStoreType());
+        assertEquals(StorageDriver.StoreType.FILESYSTEM, storageDriver.getStoreType());
     }
 
     @Test
