@@ -35,14 +35,14 @@ import java.util.stream.Collectors;
 /**
  * Created by marco.spasiano on 06/07/17.
  */
-public class AzureStorageService implements StorageService {
+public class AzureStorageDriver implements StorageDriver {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AzureStorageService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AzureStorageDriver.class);
 
     private CloudBlobContainer cloudBlobContainer;
     private AzureStorageConfigurationProperties azureStorageConfigurationProperties;
 
-    public AzureStorageService(CloudBlobContainer cloudBlobContainer, AzureStorageConfigurationProperties azureStorageConfigurationProperties) {
+    public AzureStorageDriver(CloudBlobContainer cloudBlobContainer, AzureStorageConfigurationProperties azureStorageConfigurationProperties) {
         this.cloudBlobContainer = cloudBlobContainer;
         this.azureStorageConfigurationProperties = azureStorageConfigurationProperties;
     }
@@ -389,7 +389,7 @@ public class AzureStorageService implements StorageService {
 
     @Override
     public void init() {
-        LOGGER.info("init {}...", AzureStorageService.class.getSimpleName());
+        LOGGER.info("init {}...", AzureStorageDriver.class.getSimpleName());
     }
 
 

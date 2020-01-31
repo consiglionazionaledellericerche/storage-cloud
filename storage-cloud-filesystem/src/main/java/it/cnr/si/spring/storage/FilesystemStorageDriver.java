@@ -1,12 +1,12 @@
 package it.cnr.si.spring.storage;
 
-import it.cnr.si.spring.storage.StorageObject;
-import it.cnr.si.spring.storage.StorageService;
+import it.cnr.si.spring.storage.condition.StorageDriverIsFilesystem;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Service;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
@@ -22,11 +22,12 @@ import java.util.stream.Stream;
  */
 
 @Service
-public class FilesystemStorageService implements StorageService {
+@Conditional(StorageDriverIsFilesystem.class)
+public class FilesystemStorageDriver implements StorageDriver {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FilesystemStorageService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(FilesystemStorageDriver.class);
 
-    @Value("${cnr.filesystem.directory}")
+    @Value("${cnr.storage.filesystem.directory}")
     private String directory;
 
     private Path basePath;
@@ -34,6 +35,9 @@ public class FilesystemStorageService implements StorageService {
     @Override
     @PostConstruct
     public void init() {
+
+        LOGGER.warn("Filsystem driver is meant for testing only. Don't use in production.");
+
         try {
             this.basePath = Paths.get(directory);
             Files.createDirectories(basePath);
@@ -66,7 +70,7 @@ public class FilesystemStorageService implements StorageService {
                                         StorageObject parentObject,
                                         String path,
                                         boolean makeVersionable,
-                                        StorageService.Permission... permissions) {
+                                        StorageDriver.Permission... permissions) {
 
         if (makeVersionable)
             LOGGER.debug("Filesystem storage is meant for testing only. Versionable logic is ignored");
