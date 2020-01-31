@@ -31,13 +31,13 @@ import java.util.Map;
 @Conditional(StorageDriverIsAzure.class)
 public class AzureStorageConfigurationProperties {
 
-    @Value("${cnr.azure.connectionString}")
+    @Value("${cnr.storage.azure.connectionString}")
     private String connectionString;
 
-    @Value("${cnr.azure.containerName}")
+    @Value("${cnr.storage.azure.containerName}")
     private String containerName;
 
-    @Value("#{${store.metadataKeys}}")
+    @Value("#{${cnr.storage.metadataKeys}}")
     private Map<String, String> metadataKeys;
 
 

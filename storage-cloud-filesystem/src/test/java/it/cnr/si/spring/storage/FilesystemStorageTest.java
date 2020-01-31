@@ -22,7 +22,7 @@ import static org.junit.Assert.*;
 
 @RunWith(SpringRunner.class)
 @ContextConfiguration("classpath:storage-filesystem-test-context.xml")
-//@TestPropertySource("classpath:application-test.properties")
+@TestPropertySource("classpath:META-INF/spring/filesystem.properties")
 public class FilesystemStorageTest {
 
     private final Logger log = LoggerFactory.getLogger(FilesystemStorageTest.class);
