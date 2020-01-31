@@ -31,20 +31,20 @@ import java.util.Map;
 @Conditional(StorageDriverIsS3.class)
 public class S3StorageConfigurationProperties {
 
-    @Value("${cnr.aws.authUrl}")
+    @Value("${cnr.storage.s3.authUrl}")
     private String authUrl;
-    @Value("${cnr.aws.accessKey}")
+    @Value("${cnr.storage.s3.accessKey}")
     private String accessKey;
-    @Value("${cnr.aws.secretKey}")
+    @Value("${cnr.storage.s3.secretKey}")
     private String secretKey;
-    @Value("${cnr.aws.bucketName}")
+    @Value("${cnr.storage.s3.bucketName}")
     private String bucketName;
-    @Value("${cnr.aws.deleteAfter}")
+    @Value("${cnr.storage.s3.deleteAfter}")
     private Integer deleteAfter;
-    @Value("${cnr.aws.signingRegion}")
+    @Value("${cnr.storage.s3.signingRegion}")
     private String signingRegion;
 
-    @Value("#{${store.metadataKeys}}")
+    @Value("#{${cnr.storage.metadataKeys}}")
     private Map<String, String> metadataKeys;
 
     public String getAuthUrl() {
