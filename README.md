@@ -58,40 +58,40 @@
 All configuration properties are listed here. The properties' names are dependent on the chosen driver
 
 ```properties
-cnr.storage.driver
+cnr.storage.driver=
 
-cnr.storage.azure.connectionString
-cnr.storage.azure.containerName
+cnr.storage.azure.connectionString=
+cnr.storage.azure.containerName=
 
-cnr.storage.filesystem.directory
+cnr.storage.filesystem.directory=
 
-cnr.storage.s3.authUrl
-cnr.storage.s3.accessKey
-cnr.storage.s3.secretKey
-cnr.storage.s3.bucketName
-cnr.storage.s3.deleteAfter
-cnr.storage.s3.signingRegion
+cnr.storage.s3.authUrl=
+cnr.storage.s3.accessKey=
+cnr.storage.s3.secretKey=
+cnr.storage.s3.bucketName=
+cnr.storage.s3.deleteAfter=
+cnr.storage.s3.signingRegion=
 ```
 
 CMIS properties are an exception, as they are loaded by the [Chemistry](https://chemistry.apache.org/java/opencmis.html) library. The relevant properties are
 ```properties
-repository.base.url
-org.apache.chemistry.opencmis.[...]
+repository.base.url=
+org.apache.chemistry.opencmis.[...]=
 ``` 
 See [SessionParameter](https://svn.apache.org/repos/asf/chemistry/opencmis/trunk/chemistry-opencmis-commons/chemistry-opencmis-commons-api/src/main/java/org/apache/chemistry/opencmis/commons/SessionParameter.java) for a reference of all OpenCmis parameters.
 
 A minimal set of parameters is
 ```properties
-repository.base.url
-org.apache.chemistry.opencmis.session.repository.id
-org.apache.chemistry.opencmis.binding.atompub.url
-org.apache.chemistry.opencmis.binding.browser.url
-org.apache.chemistry.opencmis.binding.spi.type
-org.apache.chemistry.opencmis.binding.connecttimeout
-org.apache.chemistry.opencmis.binding.readtimeout
-org.apache.chemistry.opencmis.binding.httpinvoker.classname
-org.apache.chemistry.opencmis.user
-org.apache.chemistry.opencmis.password
+repository.base.url=
+org.apache.chemistry.opencmis.session.repository.id=
+org.apache.chemistry.opencmis.binding.atompub.url=
+org.apache.chemistry.opencmis.binding.browser.url=
+org.apache.chemistry.opencmis.binding.spi.type=
+org.apache.chemistry.opencmis.binding.connecttimeout=
+org.apache.chemistry.opencmis.binding.readtimeout=
+org.apache.chemistry.opencmis.binding.httpinvoker.classname=
+org.apache.chemistry.opencmis.user=
+org.apache.chemistry.opencmis.password=
 ```
 
 ## 👏 How to Contribute
