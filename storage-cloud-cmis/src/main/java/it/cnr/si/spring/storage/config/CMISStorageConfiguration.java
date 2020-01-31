@@ -94,7 +94,7 @@ public class CMISStorageConfiguration {
      * so we iterate over the fields of that class
      */
     @PostConstruct
-    public void setSessionParameters() throws IllegalAccessException {
+    public void setSessionParameters() {
 
         sessionParameters = Arrays.asList(SessionParameter.class.getDeclaredFields())
                 .stream()
