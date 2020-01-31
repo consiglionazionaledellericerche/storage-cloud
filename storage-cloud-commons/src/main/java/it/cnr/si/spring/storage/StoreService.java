@@ -20,6 +20,7 @@ package it.cnr.si.spring.storage;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
@@ -34,9 +35,10 @@ import java.util.regex.Pattern;
  * Created by mspasiano on 6/12/17.
  */
 @Service
+@DependsOn("storageDriverConfigurationChecker")
 public class StoreService {
     @Autowired
-    private StorageService storageService;
+    private StorageDriver storageDriver;
     @Autowired
     private StoreBulkInfo storeBulkInfo;
 
@@ -65,10 +67,10 @@ public class StoreService {
     }
 
     public StorageObject getStorageObjectByPath(String path, boolean isFolder, boolean create) {
-        return Optional.ofNullable(storageService.getObjectByPath(path, isFolder))
+        return Optional.ofNullable(storageDriver.getObjectByPath(path, isFolder))
                 .orElseGet(() -> {
                     if (!create) return null;
-                    final List<String> names = Arrays.asList(path.split(StorageService.SUFFIX));
+                    final List<String> names = Arrays.asList(path.split(StorageDriver.SUFFIX));
                     AtomicInteger atomicInteger = new AtomicInteger(0);
                     names.stream()
                             .filter(name -> name.length() > 0)
@@ -77,17 +79,17 @@ public class StoreService {
                                 createFolderIfNotPresent(
                                         Optional.ofNullable(names.stream()
                                                 .limit(atomicInteger.longValue())
-                                                .reduce((a, b) -> a + StorageService.SUFFIX + b)
+                                                .reduce((a, b) -> a + StorageDriver.SUFFIX + b)
                                                 .get())
                                                 .filter(s -> s.length() > 0)
-                                                .orElse(StorageService.SUFFIX)
+                                                .orElse(StorageDriver.SUFFIX)
                                         , name, null, null);
                             });
                     if (create) {
-                        return Optional.ofNullable(storageService.getObjectByPath(path, true))
+                        return Optional.ofNullable(storageDriver.getObjectByPath(path, true))
                                 .orElse(new StorageObject(path, path, Collections.emptyMap()));
                     }
-                    return storageService.getObjectByPath(path, true);
+                    return storageDriver.getObjectByPath(path, true);
                 });
     }
 
@@ -100,11 +102,11 @@ public class StoreService {
     }
 
     public StorageObject getStorageObjectBykey(String key) {
-        return storageService.getObject(key);
+        return storageDriver.getObject(key);
     }
 
     public StorageObject getStorageObjectBykey(String key, UsernamePasswordCredentials customCredentials) {
-        return storageService.getObject(key, customCredentials);
+        return storageDriver.getObject(key, customCredentials);
     }
 
     public String createFolderIfNotPresent(String path, String folderName, String title, String description) {
@@ -127,7 +129,7 @@ public class StoreService {
             metadataProperties.putAll(storeBulkInfo.getAspectPropertyValue(oggettoBulk));
             aspects.addAll(aspectsToAdd);
             metadataProperties.put(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value(), aspects);
-            storageService.updateProperties(storageObject, metadataProperties);
+            storageDriver.updateProperties(storageObject, metadataProperties);
         }
         return storageObject.getPath();
     }
@@ -164,11 +166,11 @@ public class StoreService {
     }
 
     public String createFolderIfNotPresent(String path, String name, Map<String, Object> metadataProperties) {
-        return Optional.ofNullable(storageService.getObjectByPath(
-                path.concat(path.equals(StorageService.SUFFIX) ? "" : StorageService.SUFFIX).concat(name), true
+        return Optional.ofNullable(storageDriver.getObjectByPath(
+                path.concat(path.equals(StorageDriver.SUFFIX) ? "" : StorageDriver.SUFFIX).concat(name), true
         ))
                 .map(StorageObject::getPath)
-                .orElseGet(() -> storageService.createFolder(path, name, metadataProperties).getPath());
+                .orElseGet(() -> storageDriver.createFolder(path, name, metadataProperties).getPath());
     }
 
     public Boolean delete(StorageObject storageObject) {
@@ -177,7 +179,7 @@ public class StoreService {
 
     public Boolean delete(String key) {
         Assert.notNull(key);
-        return storageService.delete(key);
+        return storageDriver.delete(key);
     }
 
     public InputStream getResource(StorageObject storageObject) {
@@ -185,19 +187,19 @@ public class StoreService {
     }
 
     public InputStream getResource(String key) {
-        return storageService.getInputStream(key);
+        return storageDriver.getInputStream(key);
     }
 
     public InputStream getResource(String key, String versionId) {
-        return storageService.getInputStream(key, versionId);
+        return storageDriver.getInputStream(key, versionId);
     }
 
     public InputStream getResource(String key, Boolean majorVersion) {
-        return storageService.getInputStream(key, majorVersion);
+        return storageDriver.getInputStream(key, majorVersion);
     }
 
     public StorageObject storeSimpleDocument(Serializable oggettoBulk, InputStream inputStream, String contentType, String name,
-                                             String path, StorageService.Permission... permissions) throws StorageException {
+                                             String path, StorageDriver.Permission... permissions) throws StorageException {
         return storeSimpleDocument(oggettoBulk, inputStream, contentType, name, path, false, permissions);
     }
 
@@ -207,16 +209,16 @@ public class StoreService {
     }
 
     public StorageObject storeSimpleDocument(InputStream inputStream, String contentType, Map<String, Object> metadataProperties, StorageObject parentObject) throws StorageException {
-        return storageService.createDocument(inputStream, contentType, metadataProperties, parentObject, parentObject.getPath(), false);
+        return storageDriver.createDocument(inputStream, contentType, metadataProperties, parentObject, parentObject.getPath(), false);
     }
 
     public StorageObject storeSimpleDocument(Serializable oggettoBulk, InputStream inputStream, String contentType, String name,
-                                             String path, boolean makeVersionable, StorageService.Permission... permissions) throws StorageException {
+                                             String path, boolean makeVersionable, StorageDriver.Permission... permissions) throws StorageException {
         return storeSimpleDocument(oggettoBulk, inputStream, contentType, name, path, storeBulkInfo.getType(oggettoBulk), makeVersionable, permissions);
     }
 
     public StorageObject storeSimpleDocument(Serializable oggettoBulk, InputStream inputStream, String contentType, String name,
-                                             String path, String objectTypeName, boolean makeVersionable, StorageService.Permission... permissions) throws StorageException {
+                                             String path, String objectTypeName, boolean makeVersionable, StorageDriver.Permission... permissions) throws StorageException {
         StorageObject parentObject = getStorageObjectByPath(path, true, true);
         Map<String, Object> metadataProperties = new HashMap<String, Object>();
         name = sanitizeFilename(name);
@@ -233,26 +235,26 @@ public class StoreService {
                         .orElse(storeBulkInfo.getAspect(oggettoBulk))
         );
         metadataProperties.putAll(storeBulkInfo.getAspectPropertyValue(oggettoBulk));
-        return storageService.createDocument(inputStream, contentType, metadataProperties, parentObject, path, makeVersionable, permissions);
+        return storageDriver.createDocument(inputStream, contentType, metadataProperties, parentObject, path, makeVersionable, permissions);
     }
 
     public StorageObject restoreSimpleDocument(Serializable oggettoBulk, InputStream inputStream, String contentType, String name,
-                                               String path, boolean makeVersionable, StorageService.Permission... permissions) throws StorageException {
+                                               String path, boolean makeVersionable, StorageDriver.Permission... permissions) throws StorageException {
         return restoreSimpleDocument(oggettoBulk, inputStream, contentType, name, path, storeBulkInfo.getType(oggettoBulk), makeVersionable, permissions);
     }
 
     public StorageObject restoreSimpleDocument(Serializable oggettoBulk, InputStream inputStream, String contentType, String name,
-                                               String path, String objectTypeName, boolean makeVersionable, StorageService.Permission... permissions) throws StorageException {
-        Optional<StorageObject> optStorageObject = Optional.ofNullable(getStorageObjectByPath(path.concat(StorageService.SUFFIX).concat(sanitizeFilename(name))));
+                                               String path, String objectTypeName, boolean makeVersionable, StorageDriver.Permission... permissions) throws StorageException {
+        Optional<StorageObject> optStorageObject = Optional.ofNullable(getStorageObjectByPath(path.concat(StorageDriver.SUFFIX).concat(sanitizeFilename(name))));
         if (optStorageObject.isPresent()) {
-            return storageService.updateStream(optStorageObject.get().getKey(), inputStream, contentType);
+            return storageDriver.updateStream(optStorageObject.get().getKey(), inputStream, contentType);
         } else {
             return storeSimpleDocument(oggettoBulk, inputStream, contentType, name, path, objectTypeName, makeVersionable, permissions);
         }
     }
 
     public void updateProperties(Map<String, Object> metadataProperties, StorageObject storageObject) throws StorageException {
-        storageService.updateProperties(storageObject, metadataProperties);
+        storageDriver.updateProperties(storageObject, metadataProperties);
     }
 
     public void updateProperties(Serializable oggettoBulk, StorageObject storageObject) throws StorageException {
@@ -273,24 +275,24 @@ public class StoreService {
     }
 
     public List<StorageObject> getChildren(String key) {
-        return storageService.getChildren(key);
+        return storageDriver.getChildren(key);
     }
 
     public List<StorageObject> getChildren(String key, int depth) {
-        return storageService.getChildren(key, depth);
+        return storageDriver.getChildren(key, depth);
     }
 
     public List<StorageObject> search(String query) {
-        return storageService.search(query);
+        return storageDriver.search(query);
     }
 
 
     private String signDocuments(String json, String url) throws StorageException {
-        return storageService.signDocuments(json, url);
+        return storageDriver.signDocuments(json, url);
     }
 
     public StorageObject updateStream(String key, InputStream inputStream, String contentType) throws StorageException {
-        return storageService.updateStream(key, inputStream, contentType);
+        return storageDriver.updateStream(key, inputStream, contentType);
     }
 
     public boolean hasAspect(StorageObject storageObject, String aspect) {
@@ -314,44 +316,44 @@ public class StoreService {
     }
 
     public void copyNode(StorageObject source, StorageObject target) {
-        storageService.copyNode(source, target);
+        storageDriver.copyNode(source, target);
     }
 
     public void addConsumerToEveryone(StorageObject storageObject) {
-        addAcl(storageObject, Collections.singletonMap("GROUP_EVERYONE", StorageService.ACLType.Consumer));
+        addAcl(storageObject, Collections.singletonMap("GROUP_EVERYONE", StorageDriver.ACLType.Consumer));
     }
 
     public void removeConsumerToEveryone(StorageObject storageObject) {
-        removeAcl(storageObject, Collections.singletonMap("GROUP_EVERYONE", StorageService.ACLType.Consumer));
+        removeAcl(storageObject, Collections.singletonMap("GROUP_EVERYONE", StorageDriver.ACLType.Consumer));
     }
 
     // per gestire gruppi diversi es. CONTRATTI
     public void addConsumer(StorageObject storageObject, String group) {
-        addAcl(storageObject, Collections.singletonMap(group, StorageService.ACLType.Consumer));
+        addAcl(storageObject, Collections.singletonMap(group, StorageDriver.ACLType.Consumer));
     }
 
     public void removeConsumer(StorageObject storageObject, String group) {
-        removeAcl(storageObject, Collections.singletonMap(group, StorageService.ACLType.Consumer));
+        removeAcl(storageObject, Collections.singletonMap(group, StorageDriver.ACLType.Consumer));
     }
 
-    private void removeAcl(StorageObject storageObject, Map<String, StorageService.ACLType> permission) {
+    private void removeAcl(StorageObject storageObject, Map<String, StorageDriver.ACLType> permission) {
         managePermission(storageObject, permission, true);
     }
 
-    private void addAcl(StorageObject storageObject, Map<String, StorageService.ACLType> permission) {
+    private void addAcl(StorageObject storageObject, Map<String, StorageDriver.ACLType> permission) {
         managePermission(storageObject, permission, false);
     }
 
-    private void managePermission(StorageObject storageObject, Map<String, StorageService.ACLType> permission, boolean remove) {
-        storageService.managePermission(storageObject, permission, remove);
+    private void managePermission(StorageObject storageObject, Map<String, StorageDriver.ACLType> permission, boolean remove) {
+        storageDriver.managePermission(storageObject, permission, remove);
     }
 
     public void setInheritedPermission(StorageObject storageObject, Boolean inherited) {
-        storageService.setInheritedPermission(storageObject, inherited);
+        storageDriver.setInheritedPermission(storageObject, inherited);
     }
 
     public List<StorageObject> getRelationship(String key, String relationshipName, boolean fromTarget) {
-        return storageService.getRelationship(key, relationshipName, fromTarget);
+        return storageDriver.getRelationship(key, relationshipName, fromTarget);
     }
 
     public List<StorageObject> getRelationship(String sourceNodeRef, String relationshipName) {
@@ -363,6 +365,6 @@ public class StoreService {
     }
 
     public void createRelationship(String source, String target, String relationshipName) {
-        storageService.createRelationship(source, target, relationshipName);
+        storageDriver.createRelationship(source, target, relationshipName);
     }
 }

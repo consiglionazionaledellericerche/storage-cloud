@@ -23,6 +23,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.IOException;
@@ -42,13 +43,14 @@ import static org.junit.Assert.assertNotNull;
 
 @RunWith(SpringRunner.class)
 @ContextConfiguration("/storage-azure-test-context.xml")
+@TestPropertySource("classpath:META-INF/spring/azure.properties")
 public class AzureStoreServiceTest {
 
     public static final String TEXT = "hello worlds";
 
-    public static final String FOO = StorageService.SUFFIX + "foo spazio";
+    public static final String FOO = StorageDriver.SUFFIX + "foo spazio";
     public static final String CIAONE = "ciaone";
-    public static final String FOO_CIAONE = FOO + StorageService.SUFFIX + CIAONE;
+    public static final String FOO_CIAONE = FOO + StorageDriver.SUFFIX + CIAONE;
 
     public static final String P_CM_TITLED = "P:cm:titled";
     public static final String TEST_PDF = "test.pdf";

@@ -17,7 +17,9 @@
 
 package it.cnr.si.spring.storage.config;
 
+import it.cnr.si.spring.storage.condition.StorageDriverIsS3;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.Map;
@@ -26,22 +28,23 @@ import java.util.Map;
  * Created by mspasiano on 6/5/17.
  */
 @Configuration
+@Conditional(StorageDriverIsS3.class)
 public class S3StorageConfigurationProperties {
 
-    @Value("${cnr.aws.authUrl}")
+    @Value("${cnr.storage.s3.authUrl}")
     private String authUrl;
-    @Value("${cnr.aws.accessKey}")
+    @Value("${cnr.storage.s3.accessKey}")
     private String accessKey;
-    @Value("${cnr.aws.secretKey}")
+    @Value("${cnr.storage.s3.secretKey}")
     private String secretKey;
-    @Value("${cnr.aws.bucketName}")
+    @Value("${cnr.storage.s3.bucketName}")
     private String bucketName;
-    @Value("${cnr.aws.deleteAfter}")
+    @Value("${cnr.storage.s3.deleteAfter}")
     private Integer deleteAfter;
-    @Value("${cnr.aws.signingRegion}")
+    @Value("${cnr.storage.s3.signingRegion}")
     private String signingRegion;
 
-    @Value("#{${store.metadataKeys}}")
+    @Value("#{${cnr.storage.metadataKeys}}")
     private Map<String, String> metadataKeys;
 
     public String getAuthUrl() {

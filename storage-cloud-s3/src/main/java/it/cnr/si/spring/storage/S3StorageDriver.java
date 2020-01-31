@@ -22,6 +22,7 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
+import it.cnr.si.spring.storage.condition.StorageDriverIsS3;
 import it.cnr.si.spring.storage.config.S3StorageConfigurationProperties;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
 import org.apache.commons.io.IOUtils;
@@ -29,6 +30,7 @@ import org.apache.http.HttpStatus;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -42,15 +44,16 @@ import java.util.stream.Collectors;
  * Created by marco.spasiano on 06/07/17.
  */
 @Service
-public class S3StorageService implements StorageService {
+@Conditional(StorageDriverIsS3.class)
+public class S3StorageDriver implements StorageDriver {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(S3StorageService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(S3StorageDriver.class);
 
     private AmazonS3 amazonS3;
     private S3StorageConfigurationProperties s3StorageConfigurationProperties;
 
 
-    public S3StorageService(S3StorageConfigurationProperties s3StorageConfigurationProperties, AmazonS3 amazonS3) {
+    public S3StorageDriver(S3StorageConfigurationProperties s3StorageConfigurationProperties, AmazonS3 amazonS3) {
         this.s3StorageConfigurationProperties = s3StorageConfigurationProperties;
         this.amazonS3 = amazonS3;
     }
@@ -334,7 +337,7 @@ public class S3StorageService implements StorageService {
 
     @Override
     public void init() {
-        LOGGER.info("init {}...", S3StorageService.class.getSimpleName());
+        LOGGER.info("init {}...", S3StorageDriver.class.getSimpleName());
     }
 
 
