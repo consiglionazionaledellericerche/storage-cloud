@@ -20,7 +20,8 @@ package it.cnr.si.spring.storage.config;
 import it.cnr.si.spring.storage.MimeTypes;
 import it.cnr.si.spring.storage.StorageException;
 import it.cnr.si.spring.storage.StorageObject;
-import it.cnr.si.spring.storage.StorageService;
+import it.cnr.si.spring.storage.StorageDriver;
+import it.cnr.si.spring.storage.condition.StorageDriverIsCmis;
 import org.apache.chemistry.opencmis.client.api.*;
 import org.apache.chemistry.opencmis.client.bindings.impl.CmisBindingsHelper;
 import org.apache.chemistry.opencmis.client.bindings.impl.SessionImpl;
@@ -49,16 +50,19 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
+import org.springframework.core.env.Environment;
 
 import javax.annotation.PostConstruct;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.math.BigInteger;
 import java.net.URISyntaxException;
 import java.util.*;
@@ -68,31 +72,43 @@ import java.util.stream.Collectors;
  * Created by mspasiano on 6/15/17.
  */
 @Configuration
-@PropertySource("classpath:META-INF/spring/cmis.properties")
+@Conditional(StorageDriverIsCmis.class)
 public class CMISStorageConfiguration {
 
     private static final Logger logger = LoggerFactory.getLogger(CMISStorageConfiguration.class);
     private static final String REPOSITORY_BASE_URL = "repository.base.url";
 
-    @Value("#{${cmis.parameters}}")
     private Map<String, String> sessionParameters;
 
+    @Autowired
+    private Environment env;
+
+    /**
+     * Add all valued parameters
+     * All possible parameters are declared as static final Strings in org.apache.chemistry.opencmis.commons.SessionParameter
+     * so we iterate over the fields of that class
+     */
     @PostConstruct
-    public void parameters() {
-        /**
-         * Removal of all non-valued parameters
-         */
-        sessionParameters = sessionParameters
-                .entrySet()
+    public void setSessionParameters() {
+
+        sessionParameters = Arrays.asList(SessionParameter.class.getDeclaredFields())
                 .stream()
-                .filter(stringStringEntry -> !stringStringEntry.getValue().equals("${".concat(stringStringEntry.getKey()).concat("}")))
-                .collect(Collectors.toMap(x -> x.getKey(), x -> x.getValue()));
+                .filter(CMISStorageConfiguration::isConstantStringField)
+                .map(CMISStorageConfiguration::getPropertyName)
+                .filter(this::hasValue)
+                .collect(Collectors.toMap(
+                        parameterName -> parameterName,
+                        parameterName -> env.getProperty(parameterName)
+                ));
+
+        sessionParameters.put(REPOSITORY_BASE_URL, env.getProperty(REPOSITORY_BASE_URL));
+
         logger.debug(sessionParameters.toString());
     }
 
     @Bean
-    public StorageService storageService() {
-        StorageService siglaStorageService = new StorageService() {
+    public StorageDriver storageService() {
+        StorageDriver siglaStorageDriver = new StorageDriver() {
             private static final String ZIP_CONTENT = "service/zipper/zipContent";
             private Session siglaSession;
             private BindingSession siglaBindingSession;
@@ -589,8 +605,33 @@ public class CMISStorageConfiguration {
                 return StoreType.CMIS;
             }
         };
-        siglaStorageService.init();
-        return siglaStorageService;
+        siglaStorageDriver.init();
+        return siglaStorageDriver;
+    }
+
+
+    // --- utility functions for lambda
+
+    private static boolean isConstantStringField(Field f) {
+        return Modifier.isPublic(f.getModifiers()) &&
+                Modifier.isStatic(f.getModifiers()) &&
+                Modifier.isFinal(f.getModifiers()) &&
+                f.getType().getTypeName().equals("java.lang.String");
+    }
+
+    private static String getPropertyName(Field f) {
+        try {
+            return String.valueOf(f.get(null));
+        } catch (IllegalAccessException e) {
+            // all fields have already been filtered for public static
+            // so f.get(null) is always safe.
+            // If not something else is going on, and I raise a RuntimeException
+            throw new RuntimeException(e);
+        }
+    }
+
+    private boolean hasValue(String parameterName) {
+        return env.getProperty(parameterName) != null;
     }
 
 }
