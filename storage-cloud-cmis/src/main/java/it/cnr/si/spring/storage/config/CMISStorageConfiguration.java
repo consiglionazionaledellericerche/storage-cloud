@@ -17,7 +17,6 @@
 
 package it.cnr.si.spring.storage.config;
 
-import com.sun.org.apache.xpath.internal.operations.Mod;
 import it.cnr.si.spring.storage.MimeTypes;
 import it.cnr.si.spring.storage.StorageException;
 import it.cnr.si.spring.storage.StorageObject;
@@ -52,11 +51,9 @@ import org.json.JSONTokener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 
 import javax.annotation.PostConstruct;
@@ -69,8 +66,6 @@ import java.lang.reflect.Modifier;
 import java.math.BigInteger;
 import java.net.URISyntaxException;
 import java.util.*;
-import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -99,8 +94,8 @@ public class CMISStorageConfiguration {
         sessionParameters = Arrays.asList(SessionParameter.class.getDeclaredFields())
                 .stream()
                 .filter(CMISStorageConfiguration::isConstantStringField)
-                .map(CMISStorageConfiguration::staticFieldValue)
-                .filter(this::getStringPredicate)
+                .map(CMISStorageConfiguration::getPropertyName)
+                .filter(this::hasValue)
                 .collect(Collectors.toMap(
                         parameterName -> parameterName,
                         parameterName -> env.getProperty(parameterName)
@@ -624,7 +619,7 @@ public class CMISStorageConfiguration {
                 f.getType().getTypeName().equals("java.lang.String");
     }
 
-    private static String staticFieldValue(Field f) {
+    private static String getPropertyName(Field f) {
         try {
             return String.valueOf(f.get(null));
         } catch (IllegalAccessException e) {
@@ -635,7 +630,7 @@ public class CMISStorageConfiguration {
         }
     }
 
-    private boolean getStringPredicate(String parameterName) {
+    private boolean hasValue(String parameterName) {
         return env.getProperty(parameterName) != null;
     }
 
