@@ -17,6 +17,7 @@
 
 package it.cnr.si.spring.storage.config;
 
+import com.sun.org.apache.xpath.internal.operations.Mod;
 import it.cnr.si.spring.storage.MimeTypes;
 import it.cnr.si.spring.storage.StorageException;
 import it.cnr.si.spring.storage.StorageObject;
@@ -64,9 +65,12 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.StringReader;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.math.BigInteger;
 import java.net.URISyntaxException;
 import java.util.*;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -86,23 +90,22 @@ public class CMISStorageConfiguration {
 
     /**
      * Add all valued parameters
-     * All possible parameters are declared as static Strings in org.apache.chemistry.opencmis.commons.SessionParameter
+     * All possible parameters are declared as static final Strings in org.apache.chemistry.opencmis.commons.SessionParameter
      * so we iterate over the fields of that class
      */
     @PostConstruct
     public void setSessionParameters() throws IllegalAccessException {
-        sessionParameters = new HashMap<>();
 
-        Field[] parameterFiels = SessionParameter.class.getDeclaredFields();
-        for (Field parameterField : parameterFiels) {
-            String parameterName = String.valueOf(parameterField.get(null)); // all static
+        sessionParameters = Arrays.asList(SessionParameter.class.getDeclaredFields())
+                .stream()
+                .filter(CMISStorageConfiguration::isConstantStringField)
+                .map(CMISStorageConfiguration::staticFieldValue)
+                .filter(this::getStringPredicate)
+                .collect(Collectors.toMap(
+                        parameterName -> parameterName,
+                        parameterName -> env.getProperty(parameterName)
+                ));
 
-            String parameterValue = env.getProperty(parameterName);
-            if (parameterValue != null)
-                sessionParameters.put(parameterName, parameterValue);
-        }
-
-        // set repository.base.url separately
         sessionParameters.put(REPOSITORY_BASE_URL, env.getProperty(REPOSITORY_BASE_URL));
 
         logger.debug(sessionParameters.toString());
@@ -609,6 +612,31 @@ public class CMISStorageConfiguration {
         };
         siglaStorageDriver.init();
         return siglaStorageDriver;
+    }
+
+
+    // --- utility functions for lambda
+
+    private static boolean isConstantStringField(Field f) {
+        return Modifier.isPublic(f.getModifiers()) &&
+                Modifier.isStatic(f.getModifiers()) &&
+                Modifier.isFinal(f.getModifiers()) &&
+                f.getType().getTypeName().equals("java.lang.String");
+    }
+
+    private static String staticFieldValue(Field f) {
+        try {
+            return String.valueOf(f.get(null));
+        } catch (IllegalAccessException e) {
+            // all fields have already been filtered for public static
+            // so f.get(null) is always safe.
+            // If not something else is going on, and I raise a RuntimeException
+            throw new RuntimeException(e);
+        }
+    }
+
+    private boolean getStringPredicate(String parameterName) {
+        return env.getProperty(parameterName) != null;
     }
 
 }
