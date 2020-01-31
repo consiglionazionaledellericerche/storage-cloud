@@ -28,7 +28,7 @@ public class StorageDriverConfigurationChecker {
                 .noneMatch(type -> type.equalsIgnoreCase(driverName));
 
         if (noDriverNameSet)
-            throw new IllegalArgumentException("At least one driverName among 'azure', 'cmis', 'filesystem' or 's3' must be set in property 'cnr.storage.driver'");
+            throw new IllegalArgumentException("At least one driverName among 'azure', 'cmis', 'filesystem' or 's3' must be set in property 'cnr.storage.driver'. Current value is: "+ driverName);
 
     }
 
