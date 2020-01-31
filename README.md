@@ -79,8 +79,7 @@ repository.base.url=
 org.apache.chemistry.opencmis.[...]=
 ``` 
 See [SessionParameter](https://svn.apache.org/repos/asf/chemistry/opencmis/trunk/chemistry-opencmis-commons/chemistry-opencmis-commons-api/src/main/java/org/apache/chemistry/opencmis/commons/SessionParameter.java) for a reference of all OpenCmis parameters.
-
-A minimal set of parameters is
+A minimal set of parameters for CMIS is
 ```properties
 repository.base.url=
 org.apache.chemistry.opencmis.session.repository.id=
