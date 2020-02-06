@@ -271,7 +271,7 @@ public class FilesystemStorageDriver implements StorageDriver {
                     value = ((List) v).stream().collect(Collectors.joining(","));
                     value = "[" + value + "]";
                 } else
-                    value = v;
+                    value = v.toString();
                 prop.put(k, value);
         });
         prop.store(output, null);
