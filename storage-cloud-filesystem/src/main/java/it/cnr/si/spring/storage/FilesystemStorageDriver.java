@@ -79,7 +79,10 @@ public class FilesystemStorageDriver implements StorageDriver {
 
         metadataProperties.put("contentType", contentType);
 
-        String filename = UUID.randomUUID().toString();
+        String filename = Optional.ofNullable(metadataProperties.get(StoragePropertyNames.NAME.value()))
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
+                .orElse(UUID.randomUUID().toString());
         Path relativePath = Paths.get(
                 parentObject == null ? parentObject.getPath() : path,
                 filename);
