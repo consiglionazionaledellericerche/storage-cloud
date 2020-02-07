@@ -227,7 +227,7 @@ public class FilesystemStorageTest {
 
         StorageFile file = new StorageFile(is,
                 "text/plain",
-                "titolo");
+                "Titolo");
 
         return storeService.restoreSimpleDocument(
                 file,
