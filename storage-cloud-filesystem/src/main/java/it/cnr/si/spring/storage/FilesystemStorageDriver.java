@@ -2,6 +2,7 @@ package it.cnr.si.spring.storage;
 
 import it.cnr.si.spring.storage.condition.StorageDriverIsFilesystem;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -202,7 +203,8 @@ public class FilesystemStorageDriver implements StorageDriver {
     public List<StorageObject> getChildren(String key) {
         try {
             Stream<Path> contents = Files.list(preparePath(Paths.get(key)));
-            return contents.filter(p -> !p.endsWith(".properties"))
+            return contents.filter(p ->
+                    !FilenameUtils.getExtension(p.getFileName().toString()).equalsIgnoreCase("properties"))
                     .map(p -> getObject(p.toString()))
                     .collect(Collectors.toList());
 
