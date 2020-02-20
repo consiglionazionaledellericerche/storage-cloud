@@ -299,7 +299,7 @@ public class FilesystemStorageDriver implements StorageDriver {
                 .collect(
                 Collectors.toMap(
                         e -> e.getKey().toString(),
-                        e -> e.getValue().toString()
+                        e -> e.getValue()
                 )
         );
     }
