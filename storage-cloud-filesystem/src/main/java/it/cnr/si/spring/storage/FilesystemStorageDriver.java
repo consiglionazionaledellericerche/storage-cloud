@@ -10,9 +10,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Service;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 import javax.annotation.PostConstruct;
 import java.io.*;
+import java.math.BigInteger;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -77,9 +77,7 @@ public class FilesystemStorageDriver implements StorageDriver {
             LOGGER.debug("Filesystem storage is meant for testing only. Versionable logic is ignored");
         if (permissions.length > 0)
             LOGGER.debug("Filesystem storage is meant for testing only. Permission logic is ignored");
-
-        metadataProperties.put("contentType", contentType);
-
+        metadataProperties.put( StoragePropertyNames.CONTENT_STREAM_MIME_TYPE.value(),contentType);
         String filename = Optional.ofNullable(metadataProperties.get(StoragePropertyNames.NAME.value()))
                 .filter(String.class::isInstance)
                 .map(String.class::cast)
@@ -89,10 +87,9 @@ public class FilesystemStorageDriver implements StorageDriver {
                 filename);
 
         try {
-
-            Files.copy( inputStream, preparePath(relativePath) );
+            metadataProperties.put(StoragePropertyNames.CONTENT_STREAM_LENGTH.value(),
+                    Files.copy( inputStream, preparePath(relativePath) ));
             inputStream.close();
-
             saveMetadata(relativePath, metadataProperties);
             return new StorageObject(relativePath.toString(), relativePath.toString(), metadataProperties);
         } catch (IOException e) {
@@ -118,13 +115,12 @@ public class FilesystemStorageDriver implements StorageDriver {
         Path objectPath = preparePath(relativePath);
         if ( !Files.exists(objectPath) )
             throw new StorageException(StorageException.Type.NOT_FOUND, "Resource does not exist "+ key);
-
         try {
-            Files.copy(inputStream, objectPath, StandardCopyOption.REPLACE_EXISTING);
-            inputStream.close();
-
             Map<String, Object> metadata = getMetadata(relativePath);
-            metadata.put("contentType", contentType);
+            metadata.put(StoragePropertyNames.CONTENT_STREAM_MIME_TYPE.value(), contentType);
+            metadata.put(StoragePropertyNames.CONTENT_STREAM_LENGTH.value(),
+                    Files.copy(inputStream, objectPath, StandardCopyOption.REPLACE_EXISTING));
+            inputStream.close();
             saveMetadata(relativePath, metadata);
         } catch (IOException e) {
             throw new StorageException(StorageException.Type.GENERIC, "Unable to update content for file "+ key, e);
@@ -290,6 +286,11 @@ public class FilesystemStorageDriver implements StorageDriver {
         InputStream input = new FileInputStream(propsPath.toString());
         Properties prop = new Properties();
         prop.load(input);
+
+        Optional.ofNullable(prop.getProperty(StoragePropertyNames.CONTENT_STREAM_LENGTH.value())).ifPresent(o -> {
+            prop.put(StoragePropertyNames.CONTENT_STREAM_LENGTH.value(),(new BigInteger(o)));
+        });
+
         return prop.entrySet().stream()
                 .map(e -> {
                     String s = e.getValue().toString();
@@ -302,7 +303,7 @@ public class FilesystemStorageDriver implements StorageDriver {
                 .collect(
                 Collectors.toMap(
                         e -> e.getKey().toString(),
-                        e -> e.getValue().toString()
+                        e -> e.getValue()
                 )
         );
     }
