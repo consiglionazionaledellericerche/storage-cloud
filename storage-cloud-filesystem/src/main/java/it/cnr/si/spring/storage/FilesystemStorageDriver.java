@@ -2,6 +2,7 @@ package it.cnr.si.spring.storage;
 
 import it.cnr.si.spring.storage.condition.StorageDriverIsFilesystem;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +13,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.annotation.PostConstruct;
 import java.io.*;
+import java.math.BigInteger;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -88,10 +90,9 @@ public class FilesystemStorageDriver implements StorageDriver {
                 filename);
 
         try {
-
-            Files.copy( inputStream, absolutizePath(relativePath) );
+            metadataProperties.put(StoragePropertyNames.CONTENT_STREAM_LENGTH.value(),
+                    Files.copy( inputStream, absolutizePath(relativePath) ));
             inputStream.close();
-
             saveMetadata(relativePath, metadataProperties);
             return new StorageObject(relativePath.toString(), relativePath.toString(), metadataProperties);
         } catch (IOException e) {
@@ -117,13 +118,12 @@ public class FilesystemStorageDriver implements StorageDriver {
         Path objectPath = absolutizePath(relativePath);
         if ( !Files.exists(objectPath) )
             throw new StorageException(StorageException.Type.NOT_FOUND, "Resource does not exist "+ key);
-
         try {
-            Files.copy(inputStream, objectPath, StandardCopyOption.REPLACE_EXISTING);
-            inputStream.close();
-
             Map<String, Object> metadata = getMetadata(relativePath);
-            metadata.put("contentType", contentType);
+            metadata.put(StoragePropertyNames.CONTENT_STREAM_MIME_TYPE.value(), contentType);
+            metadata.put(StoragePropertyNames.CONTENT_STREAM_LENGTH.value(),
+                    Files.copy(inputStream, objectPath, StandardCopyOption.REPLACE_EXISTING));
+            inputStream.close();
             saveMetadata(relativePath, metadata);
         } catch (IOException e) {
             throw new StorageException(StorageException.Type.GENERIC, "Unable to update content for file "+ key, e);
@@ -287,6 +287,11 @@ public class FilesystemStorageDriver implements StorageDriver {
         InputStream input = new FileInputStream(propsPath.toString());
         Properties prop = new Properties();
         prop.load(input);
+
+        Optional.ofNullable(prop.getProperty(StoragePropertyNames.CONTENT_STREAM_LENGTH.value())).ifPresent(o -> {
+            prop.put(StoragePropertyNames.CONTENT_STREAM_LENGTH.value(),(new BigInteger(o)));
+        });
+
         return prop.entrySet().stream()
                 .map(e -> {
                     String s = e.getValue().toString();
