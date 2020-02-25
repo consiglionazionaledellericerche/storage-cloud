@@ -1,6 +1,7 @@
 package it.cnr.si.spring.storage;
 
 import it.cnr.si.spring.storage.bulk.StorageFile;
+import it.cnr.si.spring.storage.config.StoragePropertyNames;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -12,7 +13,9 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.math.BigInteger;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
@@ -79,7 +82,7 @@ public class FilesystemStorageTest {
     public void testCreateAndReadSimpleDocumentAndMetadata() {
         InputStream is = new ByteArrayInputStream(PIPPO.getBytes());
         String contentType = "text/plain";
-        String path = "/";
+        String path = "";
         Map<String, Object> metadata = new HashMap<>();
         StorageObject so = storeService.storeSimpleDocument(is, contentType, path, metadata);
 
@@ -96,6 +99,13 @@ public class FilesystemStorageTest {
         assertEquals(so.getKey(), tre.getKey());
 
         InputStream content = storeService.getResource(so.getKey());
+        so= storeService.getStorageObjectBykey(so.getKey());
+        BigInteger length= so.<BigInteger>getPropertyValue(StoragePropertyNames.CONTENT_STREAM_LENGTH.value());
+        String ctype = (String)so.getPropertyValue(StoragePropertyNames.CONTENT_STREAM_MIME_TYPE.value());
+        assertNotEquals(length,0);
+        assertNotNull(ctype);
+
+
         String contentString = new Scanner(content).next();
 
         log.info("{}", contentString);
