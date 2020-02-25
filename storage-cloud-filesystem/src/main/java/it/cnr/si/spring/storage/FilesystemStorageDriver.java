@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Service;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+
 import javax.annotation.PostConstruct;
 import java.io.*;
 import java.math.BigInteger;
@@ -53,7 +54,7 @@ public class FilesystemStorageDriver implements StorageDriver {
     public StorageObject createFolder(String path, String name, Map<String, Object> metadata) {
     	String relativePathName = sanitizePathName(path, name);
         Path relativePath = Paths.get(relativePathName);
-        Path absolutePath = preparePath(relativePath);
+        Path absolutePath = absolutizePath(relativePath);
         try {
             Files.createDirectories( absolutePath );
             saveMetadata(relativePath, metadata);
@@ -77,7 +78,9 @@ public class FilesystemStorageDriver implements StorageDriver {
             LOGGER.debug("Filesystem storage is meant for testing only. Versionable logic is ignored");
         if (permissions.length > 0)
             LOGGER.debug("Filesystem storage is meant for testing only. Permission logic is ignored");
-        metadataProperties.put( StoragePropertyNames.CONTENT_STREAM_MIME_TYPE.value(),contentType);
+
+        metadataProperties.put("contentType", contentType);
+
         String filename = Optional.ofNullable(metadataProperties.get(StoragePropertyNames.NAME.value()))
                 .filter(String.class::isInstance)
                 .map(String.class::cast)
@@ -112,7 +115,7 @@ public class FilesystemStorageDriver implements StorageDriver {
     public StorageObject updateStream(String key, InputStream inputStream, String contentType) {
 
         Path relativePath = Paths.get(key);
-        Path objectPath = preparePath(relativePath);
+        Path objectPath = absolutizePath(relativePath);
         if ( !Files.exists(objectPath) )
             throw new StorageException(StorageException.Type.NOT_FOUND, "Resource does not exist "+ key);
         try {
@@ -131,7 +134,7 @@ public class FilesystemStorageDriver implements StorageDriver {
     @Override
     public InputStream getInputStream(String name) {
         try {
-            return Files.newInputStream( preparePath(Paths.get(name)) );
+            return Files.newInputStream( absolutizePath(Paths.get(name)) );
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -150,16 +153,13 @@ public class FilesystemStorageDriver implements StorageDriver {
     @Override
     public Boolean delete(String id) {
         try {
-//            if( Files.isDirectory(preparePath(id)) )
-//                Files.deleteIfExists(preparePath(id + "/dir.properties"));
-//            else
-//                Files.deleteIfExists(preparePath(id+".properties"));
-            Path objectPath = preparePath(Paths.get(id));
+
+            Path objectPath = absolutizePath(Paths.get(id));
 			Files.walk(objectPath)
                     .sorted(Comparator.reverseOrder())
                     .map(Path::toFile)
                     .forEach(File::delete);
-//            return Files.deleteIfExists(preparePath(id));
+
             return !Files.exists(objectPath);
 
         } catch (IOException e) {
@@ -170,7 +170,7 @@ public class FilesystemStorageDriver implements StorageDriver {
     @Override
     public StorageObject getObject(String key) {
         try {
-            Path objectPath = preparePath(Paths.get(key));
+            Path objectPath = absolutizePath(Paths.get(key));
             if (Files.exists(objectPath)) {
                 Map<String, Object> metadata = getMetadata(Paths.get(key));
                 StorageObject so = new StorageObject(key, key, metadata);
@@ -198,9 +198,10 @@ public class FilesystemStorageDriver implements StorageDriver {
     @Override
     public List<StorageObject> getChildren(String key) {
         try {
-            Stream<Path> contents = Files.list(preparePath(Paths.get(key)));
-            return contents.filter(p ->
-                    !FilenameUtils.getExtension(p.getFileName().toString()).equalsIgnoreCase("properties"))
+            Stream<Path> contents = Files.list(absolutizePath(Paths.get(key)));
+            return contents
+                    .filter(p -> !p.toString().endsWith(".properties"))
+                    .map(p -> relativizePath(p))
                     .map(p -> getObject(p.toString()))
                     .collect(Collectors.toList());
 
@@ -257,10 +258,10 @@ public class FilesystemStorageDriver implements StorageDriver {
     private void saveMetadata(Path relativePath, Map<String, Object> metadata) throws IOException {
         metadata.put(StoragePropertyNames.ID.value(), relativePath.toString());
 
-        Path objectPath = preparePath(relativePath);
+        Path objectPath = absolutizePath(relativePath);
         Path propsPath =  Files.isDirectory( objectPath ) ?
                 objectPath.resolve("dir.properties") :
-                Paths.get(preparePath(relativePath) + ".properties");
+                Paths.get(absolutizePath(relativePath) + ".properties");
 
         OutputStream output = new FileOutputStream(propsPath.toString());
         Properties prop = new Properties();
@@ -279,7 +280,7 @@ public class FilesystemStorageDriver implements StorageDriver {
     }
 
     private Map<String, Object> getMetadata(Path path) throws IOException {
-        Path objectPath = preparePath(path);
+        Path objectPath = absolutizePath(path);
         Path propsPath =  Files.isDirectory( objectPath ) ?
                 objectPath.resolve("dir.properties") :
                 Paths.get(objectPath + ".properties");
@@ -325,10 +326,14 @@ public class FilesystemStorageDriver implements StorageDriver {
      * (cioe' se il path parte dalla root (es "/" o "C:\") 
      *  tolgo la root) 
      */
-    private Path preparePath(Path relative) {
+    private Path absolutizePath(Path relative) {
     	if (relative.getRoot() != null)
     		relative = relative.getRoot().relativize(relative);
         Path resolved = basePath.resolve(relative);
 		return resolved;
+    }
+
+    private Path relativizePath(Path absolutePath) {
+        return basePath.relativize(absolutePath);
     }
 }
