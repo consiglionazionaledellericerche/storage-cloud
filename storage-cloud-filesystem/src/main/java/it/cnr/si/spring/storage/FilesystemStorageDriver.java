@@ -91,7 +91,7 @@ public class FilesystemStorageDriver implements StorageDriver {
 
         try {
             metadataProperties.put(StoragePropertyNames.CONTENT_STREAM_LENGTH.value(),
-                    Files.copy( inputStream, preparePath(relativePath) ));
+                    Files.copy( inputStream, absolutizePath(relativePath) ));
             inputStream.close();
             saveMetadata(relativePath, metadataProperties);
             return new StorageObject(relativePath.toString(), relativePath.toString(), metadataProperties);
