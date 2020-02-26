@@ -79,7 +79,7 @@ public class FilesystemStorageDriver implements StorageDriver {
         if (permissions.length > 0)
             LOGGER.debug("Filesystem storage is meant for testing only. Permission logic is ignored");
 
-        metadataProperties.put("contentType", contentType);
+        metadataProperties.put(StoragePropertyNames.CONTENT_STREAM_MIME_TYPE.value(), contentType);
 
         String filename = Optional.ofNullable(metadataProperties.get(StoragePropertyNames.NAME.value()))
                 .filter(String.class::isInstance)

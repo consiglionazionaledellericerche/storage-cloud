@@ -101,7 +101,7 @@ public class FilesystemStorageTest {
         InputStream content = storeService.getResource(so.getKey());
         so= storeService.getStorageObjectBykey(so.getKey());
         BigInteger length= so.<BigInteger>getPropertyValue(StoragePropertyNames.CONTENT_STREAM_LENGTH.value());
-        String ctype = (String)so.getPropertyValue(StoragePropertyNames.CONTENT_STREAM_MIME_TYPE.value());
+        String ctype = so.<String>getPropertyValue(StoragePropertyNames.CONTENT_STREAM_MIME_TYPE.value());
         assertNotEquals(length,0);
         assertNotNull(ctype);
 
