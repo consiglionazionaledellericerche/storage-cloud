@@ -91,10 +91,12 @@ public class FilesystemStorageDriver implements StorageDriver {
 
         try {
             metadataProperties.put(StoragePropertyNames.CONTENT_STREAM_LENGTH.value(),
-                    Files.copy( inputStream, absolutizePath(relativePath) ));
+                    Files.copy(inputStream, absolutizePath(relativePath)));
             inputStream.close();
             saveMetadata(relativePath, metadataProperties);
             return new StorageObject(relativePath.toString(), relativePath.toString(), metadataProperties);
+        }catch (FileAlreadyExistsException e) {
+            throw new StorageException(StorageException.Type.CONSTRAINT_VIOLATED, "Unable to create file "+ relativePath, e);
         } catch (IOException e) {
             throw new StorageException(StorageException.Type.GENERIC, "Unable to create file "+ relativePath, e);
         }
@@ -155,10 +157,15 @@ public class FilesystemStorageDriver implements StorageDriver {
         try {
 
             Path objectPath = absolutizePath(Paths.get(id));
-			Files.walk(objectPath)
+            Path parent = objectPath.getParent();
+            Files.walk(parent).filter(path -> path.getFileName().toString().startsWith(objectPath.getFileName().toString()))
                     .sorted(Comparator.reverseOrder())
-                    .map(Path::toFile)
-                    .forEach(File::delete);
+                    .map(Path::toFile).forEach(File::delete);
+
+//			Files.walk(objectPath)
+//                    .sorted(Comparator.reverseOrder())
+//                    .map(Path::toFile)
+//                    .forEach(File::delete);
 
             return !Files.exists(objectPath);
 
@@ -264,6 +271,7 @@ public class FilesystemStorageDriver implements StorageDriver {
                 Paths.get(absolutizePath(relativePath) + ".properties");
 
         OutputStream output = new FileOutputStream(propsPath.toString());
+
         Properties prop = new Properties();
         metadata.forEach((k, v) -> {
                 Object value;
@@ -277,6 +285,7 @@ public class FilesystemStorageDriver implements StorageDriver {
                 prop.put(k, value);
         });
         prop.store(output, null);
+        output.close();
     }
 
     private Map<String, Object> getMetadata(Path path) throws IOException {
@@ -287,7 +296,7 @@ public class FilesystemStorageDriver implements StorageDriver {
         InputStream input = new FileInputStream(propsPath.toString());
         Properties prop = new Properties();
         prop.load(input);
-
+        input.close();
         Optional.ofNullable(prop.getProperty(StoragePropertyNames.CONTENT_STREAM_LENGTH.value())).ifPresent(o -> {
             prop.put(StoragePropertyNames.CONTENT_STREAM_LENGTH.value(),(new BigInteger(o)));
         });
