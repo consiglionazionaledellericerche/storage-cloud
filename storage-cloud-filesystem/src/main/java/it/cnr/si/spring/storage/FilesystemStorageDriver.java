@@ -155,20 +155,24 @@ public class FilesystemStorageDriver implements StorageDriver {
     @Override
     public Boolean delete(String id) {
         try {
-
             Path objectPath = absolutizePath(Paths.get(id));
-            Path parent = objectPath.getParent();
-            Files.walk(parent).filter(path -> path.getFileName().toString().startsWith(objectPath.getFileName().toString()))
+            if (Files.isDirectory(objectPath)) {
+                Files.walk(objectPath)
                     .sorted(Comparator.reverseOrder())
-                    .map(Path::toFile).forEach(File::delete);
+                    .map(Path::toFile)
+                    .forEach(File::delete);
 
-//			Files.walk(objectPath)
-//                    .sorted(Comparator.reverseOrder())
-//                    .map(Path::toFile)
-//                    .forEach(File::delete);
-
+            } else {
+                Path parent = objectPath.getParent();
+                Files.walk(parent)
+                        .filter(path -> {
+                            return path.getFileName().toString().startsWith(objectPath.getFileName().toString());
+                        })
+                        .sorted(Comparator.reverseOrder())
+                        .map(Path::toFile)
+                        .forEach(File::delete);
+            }
             return !Files.exists(objectPath);
-
         } catch (IOException e) {
             throw new StorageException(StorageException.Type.GENERIC, "Unable to delete "+ id, e);
         }
