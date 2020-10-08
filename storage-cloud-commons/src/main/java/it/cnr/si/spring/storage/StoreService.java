@@ -302,6 +302,7 @@ public class StoreService {
     public void addAspect(StorageObject storageObject, String aspect) {
         List<String> aspects =
                 Optional.ofNullable(storageObject.<List<String>>getPropertyValue(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value()))
+                        .map(list -> new ArrayList(list)) 
                         .orElse(new ArrayList<String>());
         aspects.add(aspect);
         updateProperties(Collections.singletonMap(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value(), aspects), storageObject);
