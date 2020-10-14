@@ -1,12 +1,14 @@
 package it.cnr.si.spring.storage;
 
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -32,16 +34,11 @@ public class GetChildrenTest {
 
     private StorageObject savedFile;
 
-    private static final String PIPPO = "pippo", PLUTO = "pluto";
+    private static final String PIPPO = "pippo", PLUTO = "pluto", ASPECT = "aspect";
 
 
     @Before
     public void setUp() {
-        storeService
-                .getChildren("/")
-                .forEach(storageObject -> {
-                    storeService.delete(storageObject);
-                });
         InputStream is = new ByteArrayInputStream(PIPPO.getBytes());
         String contentType = "text/plain";
         String path = "/";
@@ -68,4 +65,24 @@ public class GetChildrenTest {
                         .findAny().isPresent(), "Object with name found"
         );
     }
+
+    @Test
+    public void addAspect() {
+        storeService.addAspect(savedFile, ASPECT);
+        Assert.isTrue(storeService.getStorageObjectBykey(savedFile.getKey()).<List<String>>getPropertyValue(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value())
+                .contains(ASPECT),"Aspect is present");
+        Assert.isTrue(storeService.getStorageObjectBykey(savedFile.getKey()).<String>getPropertyValue(StoragePropertyNames.NAME.value())
+                .equals(PIPPO),"Name is present");
+
+    }
+
+    @After
+    public void after() {
+        storeService
+                .getChildren("/")
+                .forEach(storageObject -> {
+                    storeService.delete(storageObject);
+                });
+    }
+
 }
