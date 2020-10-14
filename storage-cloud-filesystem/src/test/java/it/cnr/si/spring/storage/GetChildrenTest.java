@@ -1,5 +1,6 @@
 package it.cnr.si.spring.storage;
 
+import it.cnr.si.spring.storage.config.StoragePropertyNames;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,16 +32,21 @@ public class GetChildrenTest {
 
     private StorageObject savedFile;
 
-    private static final String PIPPO = "pippo",
-            PLUTO = "pluto";
+    private static final String PIPPO = "pippo", PLUTO = "pluto";
 
 
     @Before
     public void setUp() {
+        storeService
+                .getChildren("/")
+                .forEach(storageObject -> {
+                    storeService.delete(storageObject);
+                });
         InputStream is = new ByteArrayInputStream(PIPPO.getBytes());
         String contentType = "text/plain";
         String path = "/";
         Map<String, Object> metadata = new HashMap<>();
+        metadata.put(StoragePropertyNames.NAME.value(), PIPPO);
         savedFile = storeService.storeSimpleDocument(is, contentType, path, metadata);
     }
 
@@ -55,5 +61,11 @@ public class GetChildrenTest {
                         .map(so -> so.getPath())
                         .noneMatch(so -> so.endsWith("properties"))
         , "Some .properties files were found");
+
+        Assert.isTrue(
+                children.stream()
+                        .filter(storageObject -> storageObject.getPropertyValue(StoragePropertyNames.NAME.value()).equals(PIPPO))
+                        .findAny().isPresent(), "Object with name found"
+        );
     }
 }
