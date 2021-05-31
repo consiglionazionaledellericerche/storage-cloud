@@ -40,7 +40,8 @@
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.5</version>
+            <version>${commons-io.version}</version>
+            <scope></scope>
         </dependency>
         <dependency>
             <groupId>com.microsoft.azure</groupId>
