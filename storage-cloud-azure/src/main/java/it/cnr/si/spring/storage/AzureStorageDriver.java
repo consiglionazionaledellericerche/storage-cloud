@@ -21,7 +21,9 @@ import com.microsoft.azure.storage.blob.*;
 import it.cnr.si.spring.storage.config.AzureStorageConfigurationProperties;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
 import it.cnr.si.util.MetadataEncodingUtils;
+import org.apache.commons.lang3.time.DateUtils;
 import org.apache.http.auth.UsernamePasswordCredentials;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,6 +75,7 @@ public class AzureStorageDriver implements StorageDriver {
         result.put(StoragePropertyNames.CONTENT_STREAM_MIME_TYPE.value(), blockBlobReference.getProperties().getContentType());
         result.put(StoragePropertyNames.ALFCMIS_NODEREF.value(), blockBlobReference.getName());
         result.put(StoragePropertyNames.ID.value(), blockBlobReference.getName());
+        result.put(StoragePropertyNames.LAST_MODIFIED.value(), DateUtils.toCalendar(blockBlobReference.getProperties().getLastModified()));
         result.put(StoragePropertyNames.NAME.value(),
                 Optional.ofNullable(blockBlobReference.getName().lastIndexOf(SUFFIX))
                         .filter(index -> index > -1)
