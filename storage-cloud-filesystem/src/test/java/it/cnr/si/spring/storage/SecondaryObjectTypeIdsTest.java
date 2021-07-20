@@ -30,6 +30,8 @@ public class SecondaryObjectTypeIdsTest {
 
     public static final String ASPECT_1 = "ASPECT 1";
     public static final String ASPECT_2 = "ASPECT 2";
+    public static final String ASPECT_3 = "ASPECT 3";
+
     private static final String PIPPO = "pippo";
     private final Logger log = LoggerFactory.getLogger(FilesystemStorageTest.class);
     @Autowired
@@ -54,9 +56,13 @@ public class SecondaryObjectTypeIdsTest {
     public void getChildrenDoesntReturnProperties() {
 
         final StorageObject storageObjectBykey = storeService.getStorageObjectBykey(savedFile.getKey());
-
         assertEquals(2, storageObjectBykey.<List>getPropertyValue(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value()).size());
         assertTrue(storeService.hasAspect(storageObjectBykey, ASPECT_1));
         assertTrue(storeService.hasAspect(storageObjectBykey, ASPECT_2));
+
+        storeService.addAspect(storageObjectBykey, ASPECT_3);
+        assertTrue(storeService.hasAspect(storeService.getStorageObjectBykey(storageObjectBykey.getKey()), ASPECT_3));
+
+
     }
 }

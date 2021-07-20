@@ -274,52 +274,59 @@ public class FilesystemStorageDriver implements StorageDriver {
                 objectPath.resolve("dir.properties") :
                 Paths.get(absolutizePath(relativePath) + ".properties");
 
-        OutputStream output = new FileOutputStream(propsPath.toString());
-
         Properties prop = new Properties();
-        metadata.forEach((k, v) -> {
-                Object value;
-                if (v == null) {
-                    value = "";
-                } else if (v instanceof List) {
-                    value = ((List) v).stream().collect(Collectors.joining(","));
-                    value = "[" + value + "]";
-                } else
-                    value = v.toString();
-                prop.put(k, value);
+        Stream.concat(
+                getMetadata(relativePath).entrySet().stream(),
+                metadata.entrySet().stream()
+        ).forEach(stringObjectEntry -> {
+            Object value;
+            if (stringObjectEntry.getValue() == null) {
+                value = "";
+            } else if (stringObjectEntry.getValue() instanceof List) {
+                value = ((List) stringObjectEntry.getValue()).stream().collect(Collectors.joining(","));
+                value = "[" + value + "]";
+            } else {
+                value = stringObjectEntry.getValue().toString();
+            }
+            prop.put(stringObjectEntry.getKey(), value);
         });
+        OutputStream output = new FileOutputStream(propsPath.toString());
         prop.store(output, null);
         output.close();
     }
 
     private Map<String, Object> getMetadata(Path path) throws IOException {
-        Path objectPath = absolutizePath(path);
-        Path propsPath =  Files.isDirectory( objectPath ) ?
-                objectPath.resolve("dir.properties") :
-                Paths.get(objectPath + ".properties");
-        InputStream input = new FileInputStream(propsPath.toString());
-        Properties prop = new Properties();
-        prop.load(input);
-        input.close();
-        Optional.ofNullable(prop.getProperty(StoragePropertyNames.CONTENT_STREAM_LENGTH.value())).ifPresent(o -> {
-            prop.put(StoragePropertyNames.CONTENT_STREAM_LENGTH.value(),(new BigInteger(o)));
-        });
+        try {
+            Path objectPath = absolutizePath(path);
+            Path propsPath = Files.isDirectory(objectPath) ?
+                    objectPath.resolve("dir.properties") :
+                    Paths.get(objectPath + ".properties");
+            InputStream input = new FileInputStream(propsPath.toString());
+            Properties prop = new Properties();
+            prop.load(input);
+            input.close();
+            Optional.ofNullable(prop.getProperty(StoragePropertyNames.CONTENT_STREAM_LENGTH.value())).ifPresent(o -> {
+                prop.put(StoragePropertyNames.CONTENT_STREAM_LENGTH.value(), (new BigInteger(o)));
+            });
 
-        return prop.entrySet().stream()
-                .map(e -> {
-                    String s = e.getValue().toString();
-                    if (s.startsWith("[")) {
-                        s = s.substring(1, s.length() - 1);
-                        e.setValue(Arrays.asList(s.split(",")));
-                    }
-                    return e;
-                })
-                .collect(
-                Collectors.toMap(
-                        e -> e.getKey().toString(),
-                        e -> e.getValue()
-                )
-        );
+            return prop.entrySet().stream()
+                    .map(e -> {
+                        String s = e.getValue().toString();
+                        if (s.startsWith("[")) {
+                            s = s.substring(1, s.length() - 1);
+                            e.setValue(Arrays.asList(s.split(",")));
+                        }
+                        return e;
+                    })
+                    .collect(
+                            Collectors.toMap(
+                                    e -> e.getKey().toString(),
+                                    e -> e.getValue()
+                            )
+                    );
+        } catch (FileNotFoundException _ex) {
+          return Collections.emptyMap();
+        }
     }
 
 
