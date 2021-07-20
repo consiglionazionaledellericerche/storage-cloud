@@ -36,8 +36,8 @@ public enum StoragePropertyNames {
     ALFCMIS_NODEREF("alfcmis:nodeRef"),
     CONTENT_STREAM_LENGTH("cmis:contentStreamLength"),
     CONTENT_STREAM_MIME_TYPE("cmis:contentStreamMimeType"),
-    SECONDARY_OBJECT_TYPE_IDS("cmis:secondaryObjectTypeIds");
-
+    SECONDARY_OBJECT_TYPE_IDS("cmis:secondaryObjectTypeIds"),
+    LAST_MODIFIED("cmis:lastModificationDate");
     private String value;
 
     StoragePropertyNames(String value) {
