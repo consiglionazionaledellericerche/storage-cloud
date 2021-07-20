@@ -120,6 +120,7 @@ public class CMISStorageConfiguration {
                     createBindingSession();
                 } catch (CmisConnectionException | CmisUnauthorizedException _ex) {
                     logger.error("Cannot access to CMIS repository", _ex);
+                    throw _ex;
                 }
 
             }

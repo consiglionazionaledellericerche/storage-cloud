@@ -30,6 +30,8 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Created by mspasiano on 6/12/17.
@@ -302,9 +304,15 @@ public class StoreService {
     public void addAspect(StorageObject storageObject, String aspect) {
         List<String> aspects =
                 Optional.ofNullable(storageObject.<List<String>>getPropertyValue(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value()))
+                        .map(list -> new ArrayList(list))
                         .orElse(new ArrayList<String>());
         aspects.add(aspect);
-        updateProperties(Collections.singletonMap(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value(), aspects), storageObject);
+        updateProperties(
+                Stream.of(
+                        new AbstractMap.SimpleEntry<>(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value(), aspects))
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)),
+                storageObject
+        );
     }
 
     public void removeAspect(StorageObject storageObject, String aspect) {
@@ -312,7 +320,11 @@ public class StoreService {
                 Optional.ofNullable(storageObject.<List<String>>getPropertyValue(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value()))
                         .orElse(new ArrayList<String>());
         aspects.remove(aspect);
-        updateProperties(Collections.singletonMap(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value(), aspects), storageObject);
+        updateProperties(
+                Stream.of(new AbstractMap.SimpleEntry<>(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value(), aspects))
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)),
+                storageObject
+        );
     }
 
     public void copyNode(StorageObject source, StorageObject target) {
