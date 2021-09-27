@@ -228,7 +228,8 @@ public class FilesystemStorageDriver implements StorageDriver {
 
     @Override
     public List<StorageObject> search(String query) {
-        throw new NotImplementedException();
+        LOGGER.warn("FILESYSTEM -> Not yet implemented");
+        return Collections.emptyList();
     }
 
     @Override

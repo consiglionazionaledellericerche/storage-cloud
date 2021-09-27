@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -361,7 +362,13 @@ public class AzureStorageDriver implements StorageDriver {
 
     @Override
     public void copyNode(StorageObject source, StorageObject target) {
-        LOGGER.warn("AZURE -> Not yet implemented -> copyNode");
+        try {
+            CloudBlob blobReference = cloudBlobContainer
+                    .getBlobReferenceFromServer(source.getKey());
+            blobReference.startCopy(new URI(target.getPath()));
+        } catch (URISyntaxException|com.microsoft.azure.storage.StorageException e) {
+            throw new StorageException(StorageException.Type.GENERIC, e);
+        }
     }
 
     @Override
