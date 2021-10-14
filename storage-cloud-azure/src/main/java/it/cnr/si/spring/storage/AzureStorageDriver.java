@@ -377,8 +377,7 @@ public class AzureStorageDriver implements StorageDriver {
 
             CloudBlob blobReference = cloudBlobContainer
                     .getBlockBlobReference(source.getKey());
-            /*CloudBlob blobReference = cloudBlobContainer
-                    .getBlobReferenceFromServer(source.getKey());*/
+
             CloudBlobDirectory folder = cloudBlobContainer.getDirectoryReference(target.getPath());
             CloudBlockBlob newBlob = folder.getBlockBlobReference(source.getPropertyValue(StoragePropertyNames.NAME.value()));
 
