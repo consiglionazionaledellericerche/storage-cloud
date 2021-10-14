@@ -104,4 +104,14 @@ public class AzureStoreServiceTest {
         storeService.delete(storeService.getStorageObjectBykey("/my-path/my-name/test.pdf"));
     }
 
+    @Test
+    public void testCopyNode() throws IOException {
+        final StorageObject storageObjectByPath = storeService.getStorageObjectByPath(FOO_CIAONE);
+        final StorageObject storageObjectByPathDir = storeService.getStorageObjectByPath("/my-path/my-name");
+        storeService.copyNode(storageObjectByPath,storageObjectByPathDir);
+        Map<String,Object> m= new HashMap<>();
+        m.put( "test","test");
+        storeService.updateProperties(m,storageObjectByPath);
+
+    }
 }
