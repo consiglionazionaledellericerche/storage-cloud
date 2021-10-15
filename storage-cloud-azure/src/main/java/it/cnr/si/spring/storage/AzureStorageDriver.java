@@ -29,11 +29,14 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Created by marco.spasiano on 06/07/17.
@@ -177,10 +180,17 @@ public class AzureStorageDriver implements StorageDriver {
     @Override
     public void updateProperties(StorageObject storageObject, Map<String, Object> metadataProperties) {
         try {
-            CloudBlockBlob blockBlobReference = cloudBlobContainer
-                    .getBlockBlobReference(storageObject.getKey());
+            CloudBlob blockBlobReference = cloudBlobContainer
+                     .getBlobReferenceFromServer(storageObject.getKey());
             if (blockBlobReference.exists()) {
-                blockBlobReference.setMetadata(putUserMetadata(metadataProperties));
+                HashMap<String, String> objectMetadataProperties=putUserMetadata(metadataProperties);
+                HashMap<String, String> metadataPropertiesToSet = new HashMap<>(Optional.ofNullable(blockBlobReference.getMetadata()).orElse(new HashMap<String,String>()));
+
+                objectMetadataProperties.forEach(
+                        (key, value) -> metadataPropertiesToSet.merge(key, value, (v1, v2) -> v2));
+
+                blockBlobReference.setMetadata(metadataPropertiesToSet);
+
                 blockBlobReference.uploadMetadata();
                 Optional.ofNullable(metadataProperties.get(StoragePropertyNames.NAME.value()))
                         .map(String.class::cast)
@@ -197,11 +207,12 @@ public class AzureStorageDriver implements StorageDriver {
     @Override
     public StorageObject updateStream(String key, InputStream inputStream, String contentType) {
         try {
-            CloudBlockBlob blockBlobReference = cloudBlobContainer
-                    .getBlockBlobReference(key);
+            CloudBlob blockBlobReference = cloudBlobContainer
+                    .getBlobReferenceFromServer(key);
+
+            HashMap<String, String> metadataSource=blockBlobReference.getMetadata();
             blockBlobReference
                     .upload(inputStream, -1);
-
             return new StorageObject(key, key, getUserMetadata(blockBlobReference));
 
         } catch (URISyntaxException | IOException | com.microsoft.azure.storage.StorageException e) {
@@ -363,10 +374,21 @@ public class AzureStorageDriver implements StorageDriver {
     @Override
     public void copyNode(StorageObject source, StorageObject target) {
         try {
+
             CloudBlob blobReference = cloudBlobContainer
-                    .getBlobReferenceFromServer(source.getKey());
-            blobReference.startCopy(new URI(target.getPath()));
-        } catch (URISyntaxException|com.microsoft.azure.storage.StorageException e) {
+                    .getBlockBlobReference(source.getKey());
+
+            CloudBlobDirectory folder = cloudBlobContainer.getDirectoryReference(target.getPath());
+            CloudBlockBlob newBlob = folder.getBlockBlobReference(source.getPropertyValue(StoragePropertyNames.NAME.value()));
+
+            System.out.println(blobReference.getProperties());
+
+            //blobReference.startCopy(new URI(URLEncoder.encode(target.getPath(), "UTF-8") ));
+            newBlob.startCopy(blobReference.getUri());
+
+
+            //blobReference.startCopy(new URI(URLEncoder.encode(target.getPath(), "UTF-8") ));
+        } catch (URISyntaxException | com.microsoft.azure.storage.StorageException e) {
             throw new StorageException(StorageException.Type.GENERIC, e);
         }
     }
