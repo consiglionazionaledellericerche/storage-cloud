@@ -177,14 +177,23 @@ public class AzureStorageDriver implements StorageDriver {
         }
     }
 
+    private boolean isDirectory(StorageObject storageObject) {
+        return Optional.ofNullable(getChildren(storageObject.getKey())).isPresent();
+    }
+
     @Override
     public void updateProperties(StorageObject storageObject, Map<String, Object> metadataProperties) {
+
+        CloudBlob blockBlobReference = null;
         try {
-            CloudBlob blockBlobReference = cloudBlobContainer
-                     .getBlobReferenceFromServer(storageObject.getKey());
+            /*I metedata sulle directory non sono supportati da Azure*/
+            if ( isDirectory(storageObject))
+                return;
+            cloudBlobContainer
+                    .getBlobReferenceFromServer(storageObject.getKey());
             if (blockBlobReference.exists()) {
-                HashMap<String, String> objectMetadataProperties=putUserMetadata(metadataProperties);
-                HashMap<String, String> metadataPropertiesToSet = new HashMap<>(Optional.ofNullable(blockBlobReference.getMetadata()).orElse(new HashMap<String,String>()));
+                HashMap<String, String> objectMetadataProperties = putUserMetadata(metadataProperties);
+                HashMap<String, String> metadataPropertiesToSet = new HashMap<>(Optional.ofNullable(blockBlobReference.getMetadata()).orElse(new HashMap<String, String>()));
 
                 objectMetadataProperties.forEach(
                         (key, value) -> metadataPropertiesToSet.merge(key, value, (v1, v2) -> v2));
@@ -210,7 +219,7 @@ public class AzureStorageDriver implements StorageDriver {
             CloudBlob blockBlobReference = cloudBlobContainer
                     .getBlobReferenceFromServer(key);
 
-            HashMap<String, String> metadataSource=blockBlobReference.getMetadata();
+            HashMap<String, String> metadataSource = blockBlobReference.getMetadata();
             blockBlobReference
                     .upload(inputStream, -1);
             return new StorageObject(key, key, getUserMetadata(blockBlobReference));
