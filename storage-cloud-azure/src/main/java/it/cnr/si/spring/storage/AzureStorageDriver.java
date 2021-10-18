@@ -26,6 +26,7 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.CollectionUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -178,18 +179,18 @@ public class AzureStorageDriver implements StorageDriver {
     }
 
     private boolean isDirectory(StorageObject storageObject) {
-        return Optional.ofNullable(getChildren(storageObject.getKey())).isPresent();
+        return ( !CollectionUtils.isEmpty(getChildren(storageObject.getKey())));
     }
 
     @Override
     public void updateProperties(StorageObject storageObject, Map<String, Object> metadataProperties) {
 
-        CloudBlob blockBlobReference = null;
+        CloudBlob blockBlobReference;
         try {
             /*I metedata sulle directory non sono supportati da Azure*/
             if ( isDirectory(storageObject))
                 return;
-            cloudBlobContainer
+            blockBlobReference=cloudBlobContainer
                     .getBlobReferenceFromServer(storageObject.getKey());
             if (blockBlobReference.exists()) {
                 HashMap<String, String> objectMetadataProperties = putUserMetadata(metadataProperties);
