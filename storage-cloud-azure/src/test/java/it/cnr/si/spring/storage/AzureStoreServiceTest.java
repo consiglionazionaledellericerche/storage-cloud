@@ -114,4 +114,14 @@ public class AzureStoreServiceTest {
         storeService.updateProperties(m,storageObjectByPath);
 
     }
+    @Test
+    public void testMetadataOnDirectory() throws IOException {
+
+        final StorageObject storageObjectByPathDir = storeService.getStorageObjectByPath("/my-path/my-name");
+
+        Map<String,Object> m= new HashMap<>();
+        m.put( "test","test");
+        storeService.updateProperties(m,storageObjectByPathDir);
+
+    }
 }

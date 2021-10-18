@@ -26,6 +26,7 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.CollectionUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -177,14 +178,23 @@ public class AzureStorageDriver implements StorageDriver {
         }
     }
 
+    private boolean isDirectory(StorageObject storageObject) {
+        return ( !CollectionUtils.isEmpty(getChildren(storageObject.getKey())));
+    }
+
     @Override
     public void updateProperties(StorageObject storageObject, Map<String, Object> metadataProperties) {
+
+        CloudBlob blockBlobReference;
         try {
-            CloudBlob blockBlobReference = cloudBlobContainer
-                     .getBlobReferenceFromServer(storageObject.getKey());
+            /*I metedata sulle directory non sono supportati da Azure*/
+            if ( isDirectory(storageObject))
+                return;
+            blockBlobReference=cloudBlobContainer
+                    .getBlobReferenceFromServer(storageObject.getKey());
             if (blockBlobReference.exists()) {
-                HashMap<String, String> objectMetadataProperties=putUserMetadata(metadataProperties);
-                HashMap<String, String> metadataPropertiesToSet = new HashMap<>(Optional.ofNullable(blockBlobReference.getMetadata()).orElse(new HashMap<String,String>()));
+                HashMap<String, String> objectMetadataProperties = putUserMetadata(metadataProperties);
+                HashMap<String, String> metadataPropertiesToSet = new HashMap<>(Optional.ofNullable(blockBlobReference.getMetadata()).orElse(new HashMap<String, String>()));
 
                 objectMetadataProperties.forEach(
                         (key, value) -> metadataPropertiesToSet.merge(key, value, (v1, v2) -> v2));
@@ -210,7 +220,7 @@ public class AzureStorageDriver implements StorageDriver {
             CloudBlob blockBlobReference = cloudBlobContainer
                     .getBlobReferenceFromServer(key);
 
-            HashMap<String, String> metadataSource=blockBlobReference.getMetadata();
+            HashMap<String, String> metadataSource = blockBlobReference.getMetadata();
             blockBlobReference
                     .upload(inputStream, -1);
             return new StorageObject(key, key, getUserMetadata(blockBlobReference));
