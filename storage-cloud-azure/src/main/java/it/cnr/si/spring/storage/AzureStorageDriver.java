@@ -21,23 +21,20 @@ import com.microsoft.azure.storage.blob.*;
 import it.cnr.si.spring.storage.config.AzureStorageConfigurationProperties;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
 import it.cnr.si.util.MetadataEncodingUtils;
+
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.http.auth.UsernamePasswordCredentials;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.CollectionUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * Created by marco.spasiano on 06/07/17.
@@ -178,9 +175,42 @@ public class AzureStorageDriver implements StorageDriver {
         }
     }
 
-    private boolean isDirectory(StorageObject storageObject) {
-        return ( !CollectionUtils.isEmpty(getChildren(storageObject.getKey())));
+    private CloudBlobDirectory getClouBlobDirectory(StorageObject storageObject) throws com.microsoft.azure.storage.StorageException {
+        try {
+            Optional<CloudBlobDirectory> storageDirectory = cloudBlobContainer.listBlobsSegmented(storageObject.getKey()).getResults().stream()
+                    .filter(CloudBlobDirectory.class::isInstance)
+                    .filter(c -> (getName((CloudBlobDirectory) c).equals(storageObject.getPath())))
+                    .findFirst()
+                    .map(CloudBlobDirectory.class::cast);
+            if (storageDirectory.isPresent())
+                return storageDirectory.get();
+        } catch (com.microsoft.azure.storage.StorageException e) {
+            if (e instanceof com.microsoft.azure.storage.StorageException) {
+                if (((com.microsoft.azure.storage.StorageException) e).getHttpStatusCode() == 404) {
+                    LOGGER.debug("Directory " + storageObject.getKey() + " does not exist", e);
+                    throw e;
+                }
+            }
+            throw new StorageException(StorageException.Type.GENERIC, e);
+        }
+        return null;
     }
+
+    private boolean isDirectory(StorageObject storageObject) {
+        CloudBlobDirectory d = null;
+        try {
+            d = getClouBlobDirectory(storageObject);
+        } catch (com.microsoft.azure.storage.StorageException e) {
+            if (((com.microsoft.azure.storage.StorageException) e).getHttpStatusCode() == 404) {
+                return false;
+            }
+        }
+        if (d == null)
+            return Boolean.FALSE;
+        return Boolean.TRUE;
+
+    }
+
 
     @Override
     public void updateProperties(StorageObject storageObject, Map<String, Object> metadataProperties) {
@@ -188,9 +218,33 @@ public class AzureStorageDriver implements StorageDriver {
         CloudBlob blockBlobReference;
         try {
             /*I metedata sulle directory non sono supportati da Azure*/
-            if ( isDirectory(storageObject))
+            if (isDirectory(storageObject)) {
+                CloudBlobDirectory storageDirectory = getClouBlobDirectory(storageObject);
+                Optional.ofNullable(storageObject)
+                        .map(so -> {
+                            Optional.ofNullable(metadataProperties.get(StoragePropertyNames.NAME.value()))
+                                    .ifPresent(name -> {
+
+                                         try {
+                                            String newDir = Optional.of(storageDirectory.getParent())
+                                                    .filter(s->s!=null)
+                                                    .map( s->getName(s))
+                                                    .orElse("").concat(Optional.ofNullable((String)name)
+                                                            .filter(s -> !s.equals(SUFFIX) && (!s.startsWith(SUFFIX)))
+                                                            .map(s -> SUFFIX.concat(s))
+                                                            .orElse((String)name));
+                                             renameDirectory(storageObject, getObjectByPath(newDir, true));
+                                             LOGGER.info("folder Dest:" + getObjectByPath(newDir, true).getPath());
+
+                                        } catch (URISyntaxException |com.microsoft.azure.storage.StorageException  e) {
+                                           throw new StorageException(StorageException.Type.GENERIC,"errore Update Proprerties Rename Folder",e);
+                                        }
+                                    });
+                            return storageObject.getKey();
+                        });
                 return;
-            blockBlobReference=cloudBlobContainer
+            }
+            blockBlobReference = cloudBlobContainer
                     .getBlobReferenceFromServer(storageObject.getKey());
             if (blockBlobReference.exists()) {
                 HashMap<String, String> objectMetadataProperties = putUserMetadata(metadataProperties);
@@ -216,6 +270,7 @@ public class AzureStorageDriver implements StorageDriver {
 
     @Override
     public StorageObject updateStream(String key, InputStream inputStream, String contentType) {
+        CloudBlob snapshot = null;
         try {
             CloudBlob blockBlobReference = cloudBlobContainer
                     .getBlobReferenceFromServer(key);
@@ -266,7 +321,7 @@ public class AzureStorageDriver implements StorageDriver {
                 .orElse(key);
         try {
             CloudBlob blobReference = cloudBlobContainer.getBlobReferenceFromServer(key);
-            blobReference.delete();
+            blobReference.delete(DeleteSnapshotsOption.INCLUDE_SNAPSHOTS, null /* accessCondition */, null /* options */, null /* opContext */);
         } catch (URISyntaxException | com.microsoft.azure.storage.StorageException e) {
             if (e instanceof com.microsoft.azure.storage.StorageException) {
                 if (((com.microsoft.azure.storage.StorageException) e).getHttpStatusCode() == 404) {
@@ -279,28 +334,32 @@ public class AzureStorageDriver implements StorageDriver {
         return true;
     }
 
+    private String getName(CloudBlobDirectory cloudBlobDirectory) {
+        Optional<String> nameOpt = Optional.ofNullable(cloudBlobDirectory).map(dir -> dir.getPrefix()).
+                filter(s -> (!s.isEmpty())).map(s -> s.substring(0, s.length() - 1));
+        if (nameOpt.isPresent())
+            return nameOpt.get();
+
+        return null;
+    }
+
     @Override
     public StorageObject getObject(String key) {
         key = Optional.ofNullable(key)
-                .filter(s -> !s.equals(SUFFIX) && s.startsWith(SUFFIX))
-                .map(s -> s.substring(1))
+                .filter(s -> !s.equals(SUFFIX))
+                .map(s -> (s.startsWith(SUFFIX) ? s.substring(1) : s))
+                .map(s -> (s.endsWith(SUFFIX) ? s.substring(0, s.length() - 1) : s))
                 .orElse(key);
-        try {
-            final Optional<StorageObject> storageObjectDirectory = cloudBlobContainer.listBlobsSegmented(key).getResults().stream()
-                    .filter(CloudBlobDirectory.class::isInstance)
-                    .findFirst()
-                    .map(CloudBlobDirectory.class::cast)
-                    .map(cloudBlobDirectory -> {
-                        String name = cloudBlobDirectory.getPrefix();
-                        name = name.substring(0, name.length() - 1);
-                        return new StorageObject(
-                                name,
-                                name,
-                                Collections.emptyMap());
-                    });
-            if (storageObjectDirectory.isPresent())
-                return storageObjectDirectory.get();
 
+        try {
+            StorageObject checkDir = new StorageObject(key, key, Collections.emptyMap());
+            if (isDirectory(checkDir)) {
+                CloudBlobDirectory cloudBlobDirectory = getClouBlobDirectory(checkDir);
+                return new StorageObject(
+                        getName(cloudBlobDirectory),
+                        getName(cloudBlobDirectory),
+                        Collections.emptyMap());
+            }
             CloudBlob blobReference = cloudBlobContainer
                     .getBlobReferenceFromServer(key);
             return new StorageObject(key, key, getUserMetadata(blobReference));
@@ -381,23 +440,170 @@ public class AzureStorageDriver implements StorageDriver {
         return null;
     }
 
+
+    private String directoryName(CloudBlobDirectory directory) {
+        if (directory == null)
+            return null;
+        return Optional.ofNullable(directory.getPrefix().lastIndexOf(SUFFIX))
+                .filter(index -> index > -1)
+                .map(index -> directory.getPrefix().substring(index + 1))
+                .orElse(directory.getPrefix());
+    }
+
+    private void deleteDirectory(StorageObject directory) {
+        if (directory == null || directory.getPath().isEmpty())
+            return;
+        if (isDirectory(directory)) {
+            try {
+                CloudBlobDirectory sourcedir = getClouBlobDirectory(directory);
+                getSubDirectory(sourcedir).forEach(s -> {
+                    LOGGER.info("sub Directory:" + s.getPrefix());
+                    StorageObject sourceSub = getObjectByPath(s.getPrefix(), true);
+                    deleteDirectory(sourceSub);
+                });
+                //copia i file
+                List<StorageObject> l = getChildren(directory.getKey());
+                StorageObject currentSo;
+                Optional.ofNullable(l).map(List::stream)
+                        .ifPresent(ob -> ob.forEach(so -> {
+                            try {
+                                delete(so.getKey());
+                                LOGGER.info("Source Key:" + so.getKey() + " dir:" + so.getKey());
+                            } catch (StorageException e) {
+                                throw new StorageException(StorageException.Type.GENERIC, "Delete Directory errore in copia/delete file" + so.getKey());
+                            }
+                        }));
+
+            } catch (StorageException | com.microsoft.azure.storage.StorageException e) {
+                throw new StorageException(StorageException.Type.GENERIC, "Delete Directory errore cancellazione file", e);
+            }
+        }
+    }
+
+    private List<CloudBlobDirectory> getSubDirectory(CloudBlobDirectory directory) {
+        try {
+            return StreamSupport.stream(directory.listBlobs().spliterator(), false)
+                    .filter(CloudBlobDirectory.class::isInstance)
+                    .map(sc -> (CloudBlobDirectory) sc)
+                    .collect(Collectors.toList());
+        } catch (com.microsoft.azure.storage.StorageException | URISyntaxException e) {
+            LOGGER.error("getSubDirectory:" + directory.getPrefix(), e);
+            throw new StorageException(StorageException.Type.GENERIC, e);
+        }
+    }
+
+    private String sanitazeDirectoryPath(String path) {
+        return Optional.ofNullable(path)
+                .filter(s -> !s.equals(SUFFIX))
+                .map(s -> (s.startsWith(SUFFIX) ? s.substring(1) : s))
+                .map(s -> (s.endsWith(SUFFIX) ? s.substring(0, s.length() - 1) : s))
+                .orElse(path);
+    }
+
+    private String getDirectoryName(CloudBlobDirectory directory) {
+        if (directory == null)
+            return null;
+
+    String name = sanitazeDirectoryPath(directory.getPrefix());
+        try {
+            return Optional.ofNullable(name.lastIndexOf(directory.getParent().getPrefix()))
+                    .filter(index -> index > -1)
+                    .map(index -> name.substring(index + 1))
+                    .orElse(name);
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        } catch (com.microsoft.azure.storage.StorageException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private boolean isValidPathRenameDirectory(StorageObject source, StorageObject dest) {
+        if (source == null || source.getPath().isEmpty())
+            return false;
+        if (dest == null || dest.getPath().isEmpty())
+            return false;
+
+        String pathParentSource =
+                Optional.ofNullable(sanitazeDirectoryPath(source.getPath()).lastIndexOf(SUFFIX))
+                        .filter(index -> index > -1)
+                        .map(index -> sanitazeDirectoryPath(source.getPath()).substring(0, index - 1))
+                        .orElse("");
+
+        String pathParentDest =
+                Optional.ofNullable(sanitazeDirectoryPath(dest.getPath()).lastIndexOf(SUFFIX))
+                        .filter(index -> index > -1)
+                        .map(index -> sanitazeDirectoryPath(dest.getPath()).substring(0, index - 1))
+                        .orElse("");
+
+
+        return pathParentSource.equals(pathParentDest);
+    }
+
+    private void renameDirectory(StorageObject source, StorageObject target) {
+        if (source == null || source.getPath().isEmpty())
+            throw new StorageException(StorageException.Type.GENERIC, "RenameDirectory Source Directory is null" + source.getKey());
+        if (target == null || target.getPath().isEmpty())
+            throw new StorageException(StorageException.Type.GENERIC, "RenameDirectory Dest Directory is null" + target.getKey());
+        if (!isValidPathRenameDirectory(source, target))
+            throw new StorageException(StorageException.Type.GENERIC, "Rename Directory->The parent Directory for Dest and Source is different:" + target.getPath() + "," + source.getPath());
+        if (source.getPath().equalsIgnoreCase(target.getPath()))
+            return;
+        copyDirectory(source, target);
+        deleteDirectory(source);
+
+
+    }
+
+    private void copyDirectory(StorageObject source, StorageObject target) {
+        if (source.getPath().equalsIgnoreCase(target.getPath()))
+            return;
+
+        if (isDirectory(source)) {
+            try {
+                CloudBlobDirectory sourcedir = getClouBlobDirectory(source);
+                getSubDirectory(sourcedir).forEach(s -> {
+                    LOGGER.debug(s.getPrefix());
+                    StorageObject targetSub = getObjectByPath(target.getPath().concat(SUFFIX).concat(getDirectoryName((CloudBlobDirectory) s)), true);
+                    StorageObject sourceSub = getObjectByPath(s.getPrefix(), true);
+                    LOGGER.debug(targetSub.getPath(), targetSub);
+                    copyDirectory(sourceSub, targetSub);
+
+                });
+                //copy files
+                List<StorageObject> l = getChildren(source.getKey());
+                StorageObject currentSo;
+                Optional.ofNullable(l).map(List::stream)
+                        .ifPresent(ob -> ob.forEach(so -> {
+                            try {
+                                copyNode(so, target);
+                                LOGGER.debug("Source Key:" + so.getKey() + " dir:" + target.getPath());
+                            } catch (StorageException e) {
+                                throw new StorageException(StorageException.Type.GENERIC, "Rename Directory errore in copia/delete file" + so.getKey());
+                            }
+                        }));
+
+            } catch (StorageException | com.microsoft.azure.storage.StorageException e) {
+                deleteDirectory(target);
+                throw new StorageException(StorageException.Type.GENERIC, "Rename Directory errore in copia/delete file");
+            }
+        }
+
+
+    }
+
     @Override
     public void copyNode(StorageObject source, StorageObject target) {
+
         try {
 
             CloudBlob blobReference = cloudBlobContainer
                     .getBlockBlobReference(source.getKey());
+            EnumSet<BlobListingDetails> listingDetails = EnumSet.of(BlobListingDetails.SNAPSHOTS);
 
             CloudBlobDirectory folder = cloudBlobContainer.getDirectoryReference(target.getPath());
             CloudBlockBlob newBlob = folder.getBlockBlobReference(source.getPropertyValue(StoragePropertyNames.NAME.value()));
-
-            System.out.println(blobReference.getProperties());
-
-            //blobReference.startCopy(new URI(URLEncoder.encode(target.getPath(), "UTF-8") ));
             newBlob.startCopy(blobReference.getUri());
-
-
-            //blobReference.startCopy(new URI(URLEncoder.encode(target.getPath(), "UTF-8") ));
         } catch (URISyntaxException | com.microsoft.azure.storage.StorageException e) {
             throw new StorageException(StorageException.Type.GENERIC, e);
         }
@@ -431,7 +637,7 @@ public class AzureStorageDriver implements StorageDriver {
 
     @Override
     public void init() {
-        LOGGER.info("init {}...", AzureStorageDriver.class.getSimpleName());
+        LOGGER.debug("init {}...", AzureStorageDriver.class.getSimpleName());
     }
 
 
