@@ -47,6 +47,7 @@ import static org.junit.Assert.assertNotNull;
 public class AzureStoreServiceTest {
 
     public static final String TEXT = "hello worlds";
+    public static final String TEXT_UPLOAD = "Upload hello worlds";
 
     public static final String FOO = StorageDriver.SUFFIX + "foo spazio";
     public static final String CIAONE = "ciaone";
@@ -106,12 +107,20 @@ public class AzureStoreServiceTest {
 
     @Test
     public void testCopyNode() throws IOException {
-        final StorageObject storageObjectByPath = storeService.getStorageObjectByPath(FOO_CIAONE);
+       final StorageObject storageObjectByPath = storeService.getStorageObjectByPath(FOO_CIAONE);
         final StorageObject storageObjectByPathDir = storeService.getStorageObjectByPath("/my-path/my-name");
         storeService.copyNode(storageObjectByPath,storageObjectByPathDir);
         Map<String,Object> m= new HashMap<>();
         m.put( "test","test");
         storeService.updateProperties(m,storageObjectByPath);
+
+    }
+    @Test
+    public void testUploadStream() throws IOException {
+        InputStream is = IOUtils.toInputStream(TEXT, Charset.defaultCharset());
+        final StorageObject storageObjectByPathDir = storeService.getStorageObjectByPath(FOO_CIAONE);
+
+        storeService.updateStream(storageObjectByPathDir.getKey(),is,"text/plain");
 
     }
     @Test
@@ -124,4 +133,45 @@ public class AzureStoreServiceTest {
         storeService.updateProperties(m,storageObjectByPathDir);
 
     }
+    private void createDirectoryTest() throws IOException {
+        InputStream is = IOUtils.toInputStream(TEXT, Charset.defaultCharset());
+        Map<String, Object> map = new HashMap();
+        map.put(StoragePropertyNames.NAME.value(), CIAONE);
+        map.put(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value(), Arrays.asList(P_CM_TITLED));
+        map.put(StoragePropertyNames.TITLE.value(), "Raffaella Carrà");
+        StorageObject document = storeService.storeSimpleDocument(is, "text/plain", FOO, map);
+        InputStream iss = storeService.getResource(FOO_CIAONE);
+        assertEquals(TEXT, IOUtils.toString(iss, Charset.defaultCharset()));
+
+        Map<String, Object> mapPdf = new HashMap();
+        mapPdf.put(StoragePropertyNames.NAME.value(), TEST_PDF);
+        mapPdf.put(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value(), Arrays.asList(P_CM_TITLED));
+        storeService.storeSimpleDocument(this.getClass().getResourceAsStream("/" + TEST_PDF), MimeTypes.PDF.mimetype(), FOO+"/subdir", mapPdf);
+
+    }
+    @Test
+    public void testMetadataNameOnDirectory() throws IOException {
+        createDirectoryTest();
+        storeService.delete(FOO+"/subdir2/"+ TEST_PDF);
+        final StorageObject storageObjectByPathDir = storeService.getStorageObjectByPath(FOO+"/subdir",true,false);
+        Map<String,Object> m= new HashMap<>();
+        m.put( "test","test");
+        m.put(StoragePropertyNames.NAME.value(), "subdir2");
+        storeService.updateProperties(m,storageObjectByPathDir);
+        InputStream iss = storeService.getResource(FOO+"/subdir2/"+ TEST_PDF);
+        assertNotNull(iss);
+
+    }
+    @Test
+    public void testGetObjectDirectoryWithSubDir() throws IOException{
+        String path="my-path/rename-dir/";
+        final StorageObject storageObjectByPathDir = storeService.getStorageObjectByPath("my-path/rename-dir/",true,false);
+        assertEquals(path,storageObjectByPathDir.getPath());
+
+    }
+
+
+
+
+
 }
