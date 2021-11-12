@@ -298,7 +298,11 @@ public class StoreService {
     }
 
     public boolean hasAspect(StorageObject storageObject, String aspect) {
-        return storageObject.<List<String>>getPropertyValue(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value()).contains(aspect);
+        return Optional.ofNullable(storageObject.<List<String>>getPropertyValue(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value()))
+                .map(List::stream)
+                .orElseGet(Stream::empty)
+                .filter(s -> s.equalsIgnoreCase(aspect))
+                .findAny().isPresent();
     }
 
     public void addAspect(StorageObject storageObject, String aspect) {
