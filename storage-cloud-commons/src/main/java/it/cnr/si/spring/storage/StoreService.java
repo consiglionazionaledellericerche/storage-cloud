@@ -129,6 +129,8 @@ public class StoreService {
             metadataProperties.putAll(storeBulkInfo.getPropertyValue(oggettoBulk));
             aspectsToAdd.addAll(storeBulkInfo.getAspect(oggettoBulk));
             metadataProperties.putAll(storeBulkInfo.getAspectPropertyValue(oggettoBulk));
+            if( aspects==null)
+                aspects= new ArrayList<String>();
             aspects.addAll(aspectsToAdd);
             metadataProperties.put(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value(), aspects);
             storageDriver.updateProperties(storageObject, metadataProperties);

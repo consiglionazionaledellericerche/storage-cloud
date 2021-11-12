@@ -29,10 +29,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -165,8 +162,16 @@ public class AzureStoreServiceTest {
     @Test
     public void testGetObjectDirectoryWithSubDir() throws IOException{
         String path="my-path/rename-dir/";
-        final StorageObject storageObjectByPathDir = storeService.getStorageObjectByPath("my-path/rename-dir/",true,false);
+        final StorageObject storageObjectByPathDir = storeService.getStorageObjectByPath(path,true,false);
         assertEquals(path,storageObjectByPathDir.getPath());
+
+    }
+    @Test
+    public void testGetObjectPath() throws IOException{
+        String folder ="foo spazio/subdir5";
+        final StorageObject storageObjectByPathDir = storeService.getStorageObjectByPath(folder);
+        List<StorageObject> childrens = Optional.ofNullable(storeService.getStorageObjectByPath( folder,true,false)).map(so->storeService.getChildren(so.getKey())).orElse(Collections.emptyList());
+        assertEquals("foo spazio",storageObjectByPathDir.getPath());
 
     }
 
