@@ -123,14 +123,13 @@ public class StoreService {
         if (oggettoBulk != null) {
             Map<String, Object> metadataProperties = new HashMap<String, Object>();
             List<String> aspectsToAdd = new ArrayList<String>();
-            List<String> aspects = (List<String>) storageObject.getPropertyValue(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value());
+            List<String> aspects =
+                            Optional.ofNullable((List<String>)storageObject.getPropertyValue(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value())).orElse(new ArrayList<String>());
             Optional.ofNullable(storeBulkInfo.getType(oggettoBulk))
                     .ifPresent(type -> metadataProperties.put(StoragePropertyNames.OBJECT_TYPE_ID.value(), type));
             metadataProperties.putAll(storeBulkInfo.getPropertyValue(oggettoBulk));
             aspectsToAdd.addAll(storeBulkInfo.getAspect(oggettoBulk));
             metadataProperties.putAll(storeBulkInfo.getAspectPropertyValue(oggettoBulk));
-            if( aspects==null)
-                aspects= new ArrayList<String>();
             aspects.addAll(aspectsToAdd);
             metadataProperties.put(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value(), aspects);
             storageDriver.updateProperties(storageObject, metadataProperties);
