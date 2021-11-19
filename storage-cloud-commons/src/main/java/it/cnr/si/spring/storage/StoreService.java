@@ -123,7 +123,8 @@ public class StoreService {
         if (oggettoBulk != null) {
             Map<String, Object> metadataProperties = new HashMap<String, Object>();
             List<String> aspectsToAdd = new ArrayList<String>();
-            List<String> aspects = (List<String>) storageObject.getPropertyValue(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value());
+            List<String> aspects =
+                            Optional.ofNullable((List<String>)storageObject.getPropertyValue(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value())).orElse(new ArrayList<String>());
             Optional.ofNullable(storeBulkInfo.getType(oggettoBulk))
                     .ifPresent(type -> metadataProperties.put(StoragePropertyNames.OBJECT_TYPE_ID.value(), type));
             metadataProperties.putAll(storeBulkInfo.getPropertyValue(oggettoBulk));
