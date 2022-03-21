@@ -8,7 +8,6 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.annotation.Order;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -45,6 +44,8 @@ public class GetChildrenTest {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put(StoragePropertyNames.NAME.value(), PIPPO);
         savedFile = storeService.storeSimpleDocument(is, contentType, path, metadata);
+        final String folderIfNotPresent = storeService.createFolderIfNotPresent(path, PLUTO, PLUTO, PLUTO);
+        storeService.storeSimpleDocument(is, contentType, "/" + PLUTO, metadata);
     }
 
     @Test
@@ -63,6 +64,30 @@ public class GetChildrenTest {
                 children.stream()
                         .filter(storageObject -> storageObject.getPropertyValue(StoragePropertyNames.NAME.value()).equals(PIPPO))
                         .findAny().isPresent(), "Object with name found"
+        );
+    }
+
+    @Test
+    public void getChildrenRecursiveDoesntReturnProperties() {
+
+        List<StorageObject> children = storeService.getChildren("/", -1);
+
+        log.info("{}", children);
+
+        Assert.isTrue(children.stream()
+                        .map(so -> so.getPath())
+                        .noneMatch(so -> so.endsWith("properties"))
+                , "Some .properties files were found");
+
+        Assert.isTrue(
+                children.stream()
+                        .filter(storageObject -> storageObject.getPropertyValue(StoragePropertyNames.NAME.value()).equals(PIPPO))
+                        .findAny().isPresent(), "Object with name found"
+        );
+        org.junit.Assert.assertEquals(
+                children.stream()
+                        .filter(storageObject -> storageObject.getPropertyValue(StoragePropertyNames.NAME.value()).equals(PIPPO))
+                        .count(), 2
         );
     }
 
