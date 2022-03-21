@@ -2,7 +2,6 @@ package it.cnr.si.spring.storage;
 
 import it.cnr.si.spring.storage.condition.StorageDriverIsFilesystem;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,22 +45,22 @@ public class FilesystemStorageDriver implements StorageDriver {
             saveMetadata(Paths.get("/"), new HashMap<>());
 
         } catch (IOException e) {
-            throw new StorageException(StorageException.Type.GENERIC, "Init: unable to create base storage directory "+ basePath, e);
+            throw new StorageException(StorageException.Type.GENERIC, "Init: unable to create base storage directory " + basePath, e);
         }
     }
 
     @Override
     public StorageObject createFolder(String path, String name, Map<String, Object> metadata) {
-    	String relativePathName = sanitizePathName(path, name);
+        String relativePathName = sanitizePathName(path, name);
         Path relativePath = Paths.get(relativePathName);
         Path absolutePath = absolutizePath(relativePath);
         try {
-            Files.createDirectories( absolutePath );
+            Files.createDirectories(absolutePath);
             saveMetadata(relativePath, metadata);
             return new StorageObject(relativePath.toString(), relativePath.toString(), metadata);
 
         } catch (IOException e) {
-            throw new StorageException(StorageException.Type.GENERIC, "Unable to create directory "+ absolutePath, e);
+            throw new StorageException(StorageException.Type.GENERIC, "Unable to create directory " + absolutePath, e);
         }
     }
 
@@ -95,10 +94,10 @@ public class FilesystemStorageDriver implements StorageDriver {
             inputStream.close();
             saveMetadata(relativePath, metadataProperties);
             return new StorageObject(relativePath.toString(), relativePath.toString(), metadataProperties);
-        }catch (FileAlreadyExistsException e) {
-            throw new StorageException(StorageException.Type.CONSTRAINT_VIOLATED, "Unable to create file "+ relativePath, e);
+        } catch (FileAlreadyExistsException e) {
+            throw new StorageException(StorageException.Type.CONSTRAINT_VIOLATED, "Unable to create file " + relativePath, e);
         } catch (IOException e) {
-            throw new StorageException(StorageException.Type.GENERIC, "Unable to create file "+ relativePath, e);
+            throw new StorageException(StorageException.Type.GENERIC, "Unable to create file " + relativePath, e);
         }
     }
 
@@ -109,7 +108,7 @@ public class FilesystemStorageDriver implements StorageDriver {
         try {
             saveMetadata(Paths.get(path), metadataProperties);
         } catch (IOException e) {
-            throw new StorageException(StorageException.Type.GENERIC, "Unable to update metadata for file "+ path, e);
+            throw new StorageException(StorageException.Type.GENERIC, "Unable to update metadata for file " + path, e);
         }
     }
 
@@ -118,8 +117,8 @@ public class FilesystemStorageDriver implements StorageDriver {
 
         Path relativePath = Paths.get(key);
         Path objectPath = absolutizePath(relativePath);
-        if ( !Files.exists(objectPath) )
-            throw new StorageException(StorageException.Type.NOT_FOUND, "Resource does not exist "+ key);
+        if (!Files.exists(objectPath))
+            throw new StorageException(StorageException.Type.NOT_FOUND, "Resource does not exist " + key);
         try {
             Map<String, Object> metadata = getMetadata(relativePath);
             metadata.put(StoragePropertyNames.CONTENT_STREAM_MIME_TYPE.value(), contentType);
@@ -128,7 +127,7 @@ public class FilesystemStorageDriver implements StorageDriver {
             inputStream.close();
             saveMetadata(relativePath, metadata);
         } catch (IOException e) {
-            throw new StorageException(StorageException.Type.GENERIC, "Unable to update content for file "+ key, e);
+            throw new StorageException(StorageException.Type.GENERIC, "Unable to update content for file " + key, e);
         }
         return getObject(key); // TODO ???
     }
@@ -136,7 +135,7 @@ public class FilesystemStorageDriver implements StorageDriver {
     @Override
     public InputStream getInputStream(String name) {
         try {
-            return Files.newInputStream( absolutizePath(Paths.get(name)) );
+            return Files.newInputStream(absolutizePath(Paths.get(name)));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -158,9 +157,9 @@ public class FilesystemStorageDriver implements StorageDriver {
             Path objectPath = absolutizePath(Paths.get(id));
             if (Files.isDirectory(objectPath)) {
                 Files.walk(objectPath)
-                    .sorted(Comparator.reverseOrder())
-                    .map(Path::toFile)
-                    .forEach(File::delete);
+                        .sorted(Comparator.reverseOrder())
+                        .map(Path::toFile)
+                        .forEach(File::delete);
 
             } else {
                 Path parent = objectPath.getParent();
@@ -174,7 +173,7 @@ public class FilesystemStorageDriver implements StorageDriver {
             }
             return !Files.exists(objectPath);
         } catch (IOException e) {
-            throw new StorageException(StorageException.Type.GENERIC, "Unable to delete "+ id, e);
+            throw new StorageException(StorageException.Type.GENERIC, "Unable to delete " + id, e);
         }
     }
 
@@ -193,7 +192,6 @@ public class FilesystemStorageDriver implements StorageDriver {
             throw new StorageException(StorageException.Type.GENERIC, e);
         }
     }
-
 
 
     @Override
@@ -223,7 +221,22 @@ public class FilesystemStorageDriver implements StorageDriver {
 
     @Override
     public List<StorageObject> getChildren(String key, int depth) {
-        throw new NotImplementedException();
+        try {
+            Stream<Path> contents = Files.walk(absolutizePath(Paths.get(key)),
+                    Optional.ofNullable(depth)
+                            .map(integer -> integer == -1 ? Integer.MAX_VALUE : integer)
+                            .orElse(depth)
+            );
+            return contents
+                    .filter(path -> !Files.isDirectory(path))
+                    .filter(p -> !p.toString().endsWith(".properties"))
+                    .map(p -> relativizePath(p))
+                    .map(p -> getObject(p.toString()))
+                    .collect(Collectors.toList());
+
+        } catch (IOException e) {
+            throw new StorageException(StorageException.Type.GENERIC, e);
+        }
     }
 
     @Override
@@ -271,7 +284,7 @@ public class FilesystemStorageDriver implements StorageDriver {
         metadata.put(StoragePropertyNames.ID.value(), relativePath.toString());
 
         Path objectPath = absolutizePath(relativePath);
-        Path propsPath =  Files.isDirectory( objectPath ) ?
+        Path propsPath = Files.isDirectory(objectPath) ?
                 objectPath.resolve("dir.properties") :
                 Paths.get(absolutizePath(relativePath) + ".properties");
 
@@ -326,32 +339,32 @@ public class FilesystemStorageDriver implements StorageDriver {
                             )
                     );
         } catch (FileNotFoundException _ex) {
-          return Collections.emptyMap();
+            return Collections.emptyMap();
         }
     }
 
 
     private String sanitizePathName(String path, String name) {
-    	String relativePathName = path + "/" + name;
+        String relativePathName = path + "/" + name;
         while (relativePathName.startsWith("/"))
-        	relativePathName = relativePathName.substring(1);
+            relativePathName = relativePathName.substring(1);
         return relativePathName;
     }
 
     /*
-     * Per ogni file e directory voglio salvarli nel prefisso basePath 
-     * settato nelle properties 
+     * Per ogni file e directory voglio salvarli nel prefisso basePath
+     * settato nelle properties
      * (es. /tmp/flows o C:\Users\User\AppData\Local\Temp\flows)
      * Per prefissare correttamente il path col basePath, prima ho bisogno
-     * di "relativizzarlo" 
-     * (cioe' se il path parte dalla root (es "/" o "C:\") 
-     *  tolgo la root) 
+     * di "relativizzarlo"
+     * (cioe' se il path parte dalla root (es "/" o "C:\")
+     *  tolgo la root)
      */
     private Path absolutizePath(Path relative) {
-    	if (relative.getRoot() != null)
-    		relative = relative.getRoot().relativize(relative);
+        if (relative.getRoot() != null)
+            relative = relative.getRoot().relativize(relative);
         Path resolved = basePath.resolve(relative);
-		return resolved;
+        return resolved;
     }
 
     private Path relativizePath(Path absolutePath) {
