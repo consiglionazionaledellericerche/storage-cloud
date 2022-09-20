@@ -70,7 +70,8 @@ public class MetadataEncodingUtils {
      */
     public static String decodeValue(String input) {
         String[] a = input.split("\\|");
-        Assert.isTrue(2 == a.length, "invalid metadata: " + input);
+        if (a.length != 2)
+            return null;
         byte[] decoded = Base64.getDecoder().decode(a[1]);
         try {
             String decodedValue = new String(decoded, UTF_8);
