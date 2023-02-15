@@ -138,6 +138,22 @@ public class AzureStorageDriver implements StorageDriver {
                 }).orElse(new StorageObject(key, key, Collections.emptyMap()));
     }
 
+    private String cleanupContentType(String contentType) {
+        try {
+            return Optional.ofNullable(contentType)
+                    .map(s -> {
+                        final int i = s.indexOf(";");
+                        if (i != -1)
+                            return s.substring(0, i);
+                        return s;
+                    })
+                    .orElse("application/octet-stream");
+        }catch( Exception e ) {
+            LOGGER.error(" cleanupContentType",e);
+            return "application/octet-stream";
+        }
+    }
+
     @Override
     public StorageObject createDocument(InputStream inputStream, String contentType, Map<String, Object> metadataProperties,
                                         StorageObject parentObject, String path, boolean makeVersionable, Permission... permissions) {
@@ -163,7 +179,7 @@ public class AzureStorageDriver implements StorageDriver {
 
             blockBlobReference
                     .upload(inputStream, -1);
-            blockBlobReference.getProperties().setContentType(contentType);
+            blockBlobReference.getProperties().setContentType(cleanupContentType( contentType));
             blockBlobReference.uploadProperties();
             blockBlobReference.setMetadata(putUserMetadata(metadataProperties));
             blockBlobReference.uploadMetadata();
@@ -234,7 +250,7 @@ public class AzureStorageDriver implements StorageDriver {
                                                             .map(s -> SUFFIX.concat(s))
                                                             .orElse((String)name));
                                              renameDirectory(storageObject, getObjectByPath(newDir, true));
-                                             LOGGER.info("folder Dest:" + getObjectByPath(newDir, true).getPath());
+                                             LOGGER.debug("folder Dest:" + getObjectByPath(newDir, true).getPath());
 
                                         } catch (URISyntaxException |com.microsoft.azure.storage.StorageException  e) {
                                            throw new StorageException(StorageException.Type.GENERIC,"errore Update Proprerties Rename Folder",e);
@@ -457,7 +473,7 @@ public class AzureStorageDriver implements StorageDriver {
             try {
                 CloudBlobDirectory sourcedir = getClouBlobDirectory(directory);
                 getSubDirectory(sourcedir).forEach(s -> {
-                    LOGGER.info("sub Directory:" + s.getPrefix());
+                    LOGGER.debug("sub Directory:" + s.getPrefix());
                     StorageObject sourceSub = getObjectByPath(s.getPrefix(), true);
                     deleteDirectory(sourceSub);
                 });
@@ -468,7 +484,7 @@ public class AzureStorageDriver implements StorageDriver {
                         .ifPresent(ob -> ob.forEach(so -> {
                             try {
                                 delete(so.getKey());
-                                LOGGER.info("Source Key:" + so.getKey() + " dir:" + so.getKey());
+                                LOGGER.debug("Source Key:" + so.getKey() + " dir:" + so.getKey());
                             } catch (StorageException e) {
                                 throw new StorageException(StorageException.Type.GENERIC, "Delete Directory errore in copia/delete file" + so.getKey());
                             }
