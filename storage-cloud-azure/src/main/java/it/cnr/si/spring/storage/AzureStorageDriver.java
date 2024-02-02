@@ -92,14 +92,7 @@ public class AzureStorageDriver implements StorageDriver {
                         .map(aLong -> StoragePropertyNames.CMIS_DOCUMENT.value())
                         .orElse(StoragePropertyNames.CMIS_FOLDER.value()));
 
-        blockBlobReference.getMetadata().forEach((b64EncodedKey, b64EncodedValue) -> {
-            String key = MetadataEncodingUtils.decodeKey(b64EncodedKey);
-            if (key.equals(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value())) {
-                result.put(key, MetadataEncodingUtils.decodeValues(b64EncodedValue));
-            } else {
-                result.put(key, MetadataEncodingUtils.decodeValue(b64EncodedValue));
-            }
-        });
+
         return result;
     }
 
@@ -195,7 +188,9 @@ public class AzureStorageDriver implements StorageDriver {
 
     private CloudBlobDirectory getClouBlobDirectory(StorageObject storageObject) throws com.microsoft.azure.storage.StorageException {
         try {
-            Optional<CloudBlobDirectory> storageDirectory = cloudBlobContainer.listBlobsSegmented(storageObject.getKey()).getResults().stream()
+            Optional<CloudBlobDirectory> storageDirectory = cloudBlobContainer.listBlobsSegmented(storageObject.getKey())
+                    .getResults()
+                    .stream()
                     .filter(CloudBlobDirectory.class::isInstance)
                     .filter(c -> (getName((CloudBlobDirectory) c).equals(storageObject.getPath())))
                     .findFirst()
@@ -376,7 +371,7 @@ public class AzureStorageDriver implements StorageDriver {
                 return new StorageObject(
                         getName(cloudBlobDirectory),
                         getName(cloudBlobDirectory),
-                        Collections.emptyMap());
+                        getUserMetadata(cloudBlobDirectory));
             }
             CloudBlob blobReference = cloudBlobContainer
                     .getBlobReferenceFromServer(key);
@@ -418,15 +413,7 @@ public class AzureStorageDriver implements StorageDriver {
         return getChildren(key);
     }
 
-    private ArrayList<ListBlobItem> innerListBlobItemResultSegment(CloudBlobDirectory folder){
-        try {
-            return cloudBlobContainer.listBlobsSegmented(folder.getPrefix()).getResults();
-        } catch (com.microsoft.azure.storage.StorageException e) {
-            throw new StorageException(StorageException.Type.GENERIC, e);
-        }
-    }
-
-    private List<StorageObject> getStorageObjects(List<ListBlobItem> l) {
+    private List<StorageObject> getStorageObjectsFiles(List<ListBlobItem> l) {
         if ( Optional.ofNullable(l).isPresent()) {
             return l.stream()
                     .filter(CloudBlockBlob.class::isInstance)
@@ -445,25 +432,33 @@ public class AzureStorageDriver implements StorageDriver {
         }
         return new ArrayList<StorageObject>();
     }
-    private List<StorageObject>getChildren(CloudBlobDirectory directory){
-        List<ListBlobItem> listBlobItem = Optional.ofNullable(directory)
-                .map(CloudBlobDirectory.class::cast)
-                .map(folder -> {
-                    return innerListBlobItemResultSegment(folder);
-                }).get();
+    private Map<String, Object> getUserMetadata(CloudBlobDirectory cloudBlobDirectory) {
+        Map<String, Object> result = new HashMap<String, Object>();
 
-        List<StorageObject> childrens= getStorageObjects(listBlobItem );
+        result.put(StoragePropertyNames.BASE_TYPE_ID.value(),
+                        StoragePropertyNames.CMIS_FOLDER.value());
 
-        List<CloudBlobDirectory> directories =  listBlobItem.
-                stream()
-                .filter(CloudBlobDirectory.class::isInstance)
-                .map(CloudBlobDirectory.class::cast)
-                .collect(Collectors.toList());
-
-        directories.forEach(cloudBlobDirectory ->{
-            childrens.addAll(getChildren(cloudBlobDirectory));
-        });
-
+        result.put(StoragePropertyNames.NAME.value(),getDirectoryName( cloudBlobDirectory));
+        return result;
+    }
+    private List<StorageObject> getStorageObjectsDirectories(List<ListBlobItem> listBlobItem) {
+        if ( Optional.ofNullable(listBlobItem).isPresent()) {
+            return listBlobItem.stream()
+                    .filter(CloudBlobDirectory.class::isInstance)
+                    .map(CloudBlobDirectory.class::cast)
+                    .map(cloudBlobDirectory -> {
+                            return new StorageObject(
+                                    sanitazeDirectoryPath(cloudBlobDirectory.getPrefix()),
+                                    sanitazeDirectoryPath(cloudBlobDirectory.getPrefix()),
+                                    getUserMetadata(cloudBlobDirectory));
+                    })
+                    .collect(Collectors.toList());
+        }
+        return new ArrayList<StorageObject>();
+    }
+    private List<StorageObject>getChildren(List<ListBlobItem> listBlobItem){
+        List<StorageObject> childrens= getStorageObjectsFiles(listBlobItem );
+        childrens.addAll( getStorageObjectsDirectories(listBlobItem));
         return childrens;
     }
     @Override
@@ -473,13 +468,12 @@ public class AzureStorageDriver implements StorageDriver {
                     .filter(s -> !s.equals(SUFFIX) && s.startsWith(SUFFIX))
                     .map(s -> s.substring(1))
                     .orElse(key).concat(SUFFIX);
+                try {
+                   return getChildren(cloudBlobContainer.listBlobsSegmented(key).getResults());
+                } catch (com.microsoft.azure.storage.StorageException e) {
+                    throw new StorageException(StorageException.Type.GENERIC, e);
+                }
 
-            try {
-                CloudBlobDirectory directory = cloudBlobContainer.getDirectoryReference(key);
-                return getChildren(directory);
-            } catch (URISyntaxException e) {
-                throw new StorageException(StorageException.Type.GENERIC, e);
-            }
         }
 
 
@@ -519,15 +513,6 @@ public class AzureStorageDriver implements StorageDriver {
         return null;
     }
 
-
-    private String directoryName(CloudBlobDirectory directory) {
-        if (directory == null)
-            return null;
-        return Optional.ofNullable(directory.getPrefix().lastIndexOf(SUFFIX))
-                .filter(index -> index > -1)
-                .map(index -> directory.getPrefix().substring(index + 1))
-                .orElse(directory.getPrefix());
-    }
 
     private void deleteDirectory(StorageObject directory) {
         if (directory == null || directory.getPath().isEmpty())
@@ -584,17 +569,13 @@ public class AzureStorageDriver implements StorageDriver {
             return null;
 
     String name = sanitazeDirectoryPath(directory.getPrefix());
-        try {
-            return Optional.ofNullable(name.lastIndexOf(directory.getParent().getPrefix()))
+
+            return Optional.ofNullable(name.lastIndexOf(SUFFIX))
                     .filter(index -> index > -1)
                     .map(index -> name.substring(index + 1))
                     .orElse(name);
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        } catch (com.microsoft.azure.storage.StorageException e) {
-            e.printStackTrace();
-        }
-        return null;
+
+
     }
 
     private boolean isValidPathRenameDirectory(StorageObject source, StorageObject dest) {
