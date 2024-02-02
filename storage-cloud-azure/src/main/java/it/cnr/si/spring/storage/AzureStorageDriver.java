@@ -17,6 +17,7 @@
 
 package it.cnr.si.spring.storage;
 
+import com.microsoft.azure.storage.ResultSegment;
 import com.microsoft.azure.storage.blob.*;
 import it.cnr.si.spring.storage.config.AzureStorageConfigurationProperties;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
@@ -28,6 +29,7 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.swing.text.html.Option;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -416,14 +418,73 @@ public class AzureStorageDriver implements StorageDriver {
         return getChildren(key);
     }
 
+    private ArrayList<ListBlobItem> innerListBlobItemResultSegment(CloudBlobDirectory folder){
+        try {
+            return cloudBlobContainer.listBlobsSegmented(folder.getPrefix()).getResults();
+        } catch (com.microsoft.azure.storage.StorageException e) {
+            throw new StorageException(StorageException.Type.GENERIC, e);
+        }
+    }
+
+    private List<StorageObject> getStorageObjects(List<ListBlobItem> l) {
+        if ( Optional.ofNullable(l).isPresent()) {
+            return l.stream()
+                    .filter(CloudBlockBlob.class::isInstance)
+                    .map(CloudBlockBlob.class::cast)
+                    .map(cloudBlockBlob -> {
+                        try {
+                            return new StorageObject(
+                                    cloudBlockBlob.getName(),
+                                    cloudBlockBlob.getName(),
+                                    getUserMetadata(cloudBlobContainer.getBlobReferenceFromServer(cloudBlockBlob.getName())));
+                        } catch (URISyntaxException | com.microsoft.azure.storage.StorageException e) {
+                            throw new StorageException(StorageException.Type.GENERIC, e);
+                        }
+                    })
+                    .collect(Collectors.toList());
+        }
+        return new ArrayList<StorageObject>();
+    }
+    private List<StorageObject>getChildren(CloudBlobDirectory directory){
+        List<ListBlobItem> listBlobItem = Optional.ofNullable(directory)
+                .map(CloudBlobDirectory.class::cast)
+                .map(folder -> {
+                    return innerListBlobItemResultSegment(folder);
+                }).get();
+
+        List<StorageObject> childrens= getStorageObjects(listBlobItem );
+
+        List<CloudBlobDirectory> directories =  listBlobItem.
+                stream()
+                .filter(CloudBlobDirectory.class::isInstance)
+                .map(CloudBlobDirectory.class::cast)
+                .collect(Collectors.toList());
+
+        directories.forEach(cloudBlobDirectory ->{
+            childrens.addAll(getChildren(cloudBlobDirectory));
+        });
+
+        return childrens;
+    }
     @Override
     public List<StorageObject> getChildren(String key) {
-        try {
+
             key = Optional.ofNullable(key)
                     .filter(s -> !s.equals(SUFFIX) && s.startsWith(SUFFIX))
                     .map(s -> s.substring(1))
                     .orElse(key).concat(SUFFIX);
-            return cloudBlobContainer.listBlobsSegmented(key).getResults()
+
+            try {
+                CloudBlobDirectory directory = cloudBlobContainer.getDirectoryReference(key);
+                return getChildren(directory);
+            } catch (URISyntaxException e) {
+                throw new StorageException(StorageException.Type.GENERIC, e);
+            }
+        }
+
+
+/*
+            return cloudBlobContainer.listBlobsSegmented(directory.getPrefix()).getResults()
                     .stream()
                     .filter(CloudBlockBlob.class::isInstance)
                     .map(CloudBlockBlob.class::cast)
@@ -439,11 +500,13 @@ public class AzureStorageDriver implements StorageDriver {
                     })
                     .collect(Collectors.toList());
 
-        } catch (com.microsoft.azure.storage.StorageException e) {
-            throw new StorageException(StorageException.Type.GENERIC, e);
+        } catch (URISyntaxException | com.microsoft.azure.storage.StorageException e) {
+         throw new StorageException(StorageException.Type.GENERIC, e);
         }
-    }
 
+
+    }
+*/
     @Override
     public List<StorageObject> search(String query) {
         LOGGER.warn("AZURE -> Not yet implemented");
@@ -595,7 +658,7 @@ public class AzureStorageDriver implements StorageDriver {
                                 copyNode(so, target);
                                 LOGGER.debug("Source Key:" + so.getKey() + " dir:" + target.getPath());
                             } catch (StorageException e) {
-                                throw new StorageException(StorageException.Type.GENERIC, "Rename Directory errore in copia/delete file" + so.getKey());
+                                throw new StorageException(StorageException.Type.GENERIC, "Rename Directory  errore in copia/delete file" + so.getKey());
                             }
                         }));
 
