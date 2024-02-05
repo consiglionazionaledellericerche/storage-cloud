@@ -34,7 +34,7 @@ public class MetadataEncodingUtilsTest {
     public static final String ENCODED_KEY = "CNR_Zm9vX3BpcHBvOmJhci1iYXo";
 
     public static final String VALUE = "EPFL | École polytechnique fédérale de Lausanne: home";
-    public static final String ENCODED_VALUE = "CE7A46462067A4959A06E3CC010761BD|RVBGTCB8IMOJY29sZSBwb2x5dGVjaG5pcXVlIGbDqWTDqXJhbGUgZGUgTGF1c2FubmU6IGhvbWU";
+    public static final String ENCODED_VALUE = "60C19D5BF923F4F284972C60F9FA5345|SVQwMTY0MTc5MDcwMjIwMjNLXzAxMW80X01UXzAwMS54bWw";
 
     public static final String ENCODED_VALUES = "C1464EC8021E90955A3494D72A4D43E3|U3RpZyBUw7hmdGluZw,32CA428ED8CF01AFC14383134BCF3135|SmVzcGVyIEdyw7hua2rDpnI";
     public static final String STIG_TOFTING = "Stig Tøfting";
