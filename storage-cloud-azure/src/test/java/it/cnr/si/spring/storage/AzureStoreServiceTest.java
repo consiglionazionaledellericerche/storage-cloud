@@ -17,6 +17,7 @@
 
 package it.cnr.si.spring.storage;
 
+import com.microsoft.azure.storage.blob.CloudBlobDirectory;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
 import org.apache.commons.io.IOUtils;
 import org.junit.Test;
@@ -28,6 +29,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.*;
 
@@ -104,8 +106,9 @@ public class AzureStoreServiceTest {
 
     @Test
     public void testCopyNode() throws IOException {
-       final StorageObject storageObjectByPath = storeService.getStorageObjectByPath(FOO_CIAONE);
-        final StorageObject storageObjectByPathDir = storeService.getStorageObjectByPath("/my-path/my-name");
+       //final StorageObject storageObjectByPath = storeService.getStorageObjectByPath(FOO_CIAONE);
+        final StorageObject storageObjectByPath = storeService.getStorageObjectByPath("Comunicazioni da ISS/000.000/Contratti/2023/Contratto 2023D000000002");
+        final StorageObject storageObjectByPathDir = storeService.getStorageObjectByPath("Comunicazioni da ISS / 000.000 / Contratti / 2023 / Contratto 2023DTEST / ");
         storeService.copyNode(storageObjectByPath,storageObjectByPathDir);
         Map<String,Object> m= new HashMap<>();
         m.put( "test","test");
@@ -146,6 +149,19 @@ public class AzureStoreServiceTest {
         storeService.storeSimpleDocument(this.getClass().getResourceAsStream("/" + TEST_PDF), MimeTypes.PDF.mimetype(), FOO+"/subdir", mapPdf);
 
     }
+
+    @Test
+    public void renameDirectory() throws IOException {
+
+        final StorageObject storageObjectByPathDir = storeService.getStorageObjectByPath("Comunicazioni da ISS/000.000/Contratti/2023/Contratto 2023P000000012",true,false);
+        Map<String,Object> m= new HashMap<>();
+        m.put(StoragePropertyNames.NAME.value(), "Contratto 2023D000000012");
+        storeService.updateProperties(m,storageObjectByPathDir);
+       // InputStream iss = storeService.getResource(FOO+"/subdir2/"+ TEST_PDF);
+       // assertNotNull(iss);
+
+    }
+
     @Test
     public void testMetadataNameOnDirectory() throws IOException {
         createDirectoryTest();
@@ -175,8 +191,11 @@ public class AzureStoreServiceTest {
 
     }
 
+    @Test
+    public void testGetChildren() throws IOException {
+        List<StorageObject> l =storeService.getChildren("/Comunicazioni a ISS/Missioni/000.001/Rimborso Missione/Anno 2024/000000001");
+        assertNotNull(l);
 
-
-
+    }
 
 }
