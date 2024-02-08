@@ -92,6 +92,14 @@ public class AzureStorageDriver implements StorageDriver {
                         .map(aLong -> StoragePropertyNames.CMIS_DOCUMENT.value())
                         .orElse(StoragePropertyNames.CMIS_FOLDER.value()));
 
+        blockBlobReference.getMetadata().forEach((b64EncodedKey, b64EncodedValue) -> {
+            String key = MetadataEncodingUtils.decodeKey(b64EncodedKey);
+            if (key.equals(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value())) {
+                result.put(key, MetadataEncodingUtils.decodeValues(b64EncodedValue));
+            } else {
+                result.put(key, MetadataEncodingUtils.decodeValue(b64EncodedValue));
+            }
+        });
 
         return result;
     }
@@ -437,6 +445,9 @@ public class AzureStorageDriver implements StorageDriver {
 
         result.put(StoragePropertyNames.BASE_TYPE_ID.value(),
                         StoragePropertyNames.CMIS_FOLDER.value());
+
+        result.put(StoragePropertyNames.SECONDARY_OBJECT_TYPE_IDS.value(),
+                Collections.emptyList());
 
         result.put(StoragePropertyNames.NAME.value(),getDirectoryName( cloudBlobDirectory));
         return result;
