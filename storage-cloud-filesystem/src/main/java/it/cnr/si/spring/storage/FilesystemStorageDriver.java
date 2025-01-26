@@ -101,10 +101,71 @@ public class FilesystemStorageDriver implements StorageDriver {
         }
     }
 
+    private StorageObject renameDirectory( StorageObject storageObject,Map<String, Object> metadataProperties,boolean renameDirFromUpdateProperties){
+        Path objectPath = absolutizePath(Paths.get(storageObject.getKey()));
+        try{
+            Files.move(objectPath, objectPath.resolveSibling(metadataProperties.get( StoragePropertyNames.NAME.value()).toString()));
+            Path newKey=relativizePath(Paths.get(objectPath.getParent().toString().
+                    concat(SUFFIX).
+                    concat(metadataProperties.get( StoragePropertyNames.NAME.value()).toString())));
+            StorageObject soDirectory= getObject(newKey.toString());
+            List<StorageObject> listChildren = getChildren(soDirectory.getKey());
+            if ( listChildren!=null && !listChildren.isEmpty()) {
+                for ( StorageObject so: listChildren) {
+                    if (!Files.isDirectory(absolutizePath(Paths.get(so.getKey())))) {
+                        copyNode(so, soDirectory);
+                    }else{
+                        renameDirectory(so,getMetadata(Paths.get(so.getPath())),false);
+                    }
+
+                }
+            }
+            StorageObject so = getObject(newKey.toString());
+            if ( !renameDirFromUpdateProperties )
+                updateProperties(so, getMetadata(Paths.get(so.getPath())));
+            return so;
+
+
+        } catch (IOException e) {
+            throw new StorageException(StorageException.Type.GENERIC, "Unable to rename the directory " + storageObject.getPath(), e);
+        }
+    }
+    private StorageObject checkIsAndRenameDirectory(StorageObject storageObject,Map<String, Object> metadataProperties,boolean renameDirFromUpdateProperties)  {
+        Path objectPath = absolutizePath(Paths.get(storageObject.getKey()));
+        if (Files.isDirectory(objectPath)&&
+        metadataProperties.containsKey(StoragePropertyNames.NAME.value())
+                && (!metadataProperties.get(StoragePropertyNames.NAME.value()).toString().equals(storageObject.getPropertyValue(StoragePropertyNames.NAME.value())))) {
+            //rename Directory
+            return renameDirectory( storageObject,metadataProperties,renameDirFromUpdateProperties);
+        }
+        return storageObject;
+    }
+    private StorageObject updateDocument(StorageObject storageObject,String fileName) throws IOException {
+
+            if (!storageObject.getPropertyValue(StoragePropertyNames.NAME.value()).equals(fileName)) {
+
+                String currenFileName=storageObject.getPropertyValue(StoragePropertyNames.NAME.value());
+                Path objectPath = absolutizePath(Paths.get(storageObject.getPath()));
+                Path propsPath = Paths.get(absolutizePath(Paths.get(storageObject.getPath())) + ".properties");
+                try {
+                    Files.move(propsPath, propsPath.resolveSibling(storageObject.getPropertyValue( StoragePropertyNames.NAME.value()).toString().concat(".properties")));
+                } catch (IOException e) {
+                    throw new StorageException(StorageException.Type.GENERIC, "Unable to move metadata for file " + storageObject.getPath()+" File Rename", e);
+                }
+                try {
+                    Files.move(objectPath, objectPath.resolveSibling(storageObject.getPropertyValue( StoragePropertyNames.NAME.value()).toString().toString()));
+                } catch (IOException e) {
+                    throw new StorageException(StorageException.Type.GENERIC, "Unable to move metadata for file " + storageObject.getPath()+" File Rename", e);
+                }
+                storageObject = getObject(relativizePath(Paths.get(objectPath.getParent().toString().concat(SUFFIX).concat(currenFileName))).toString());
+            }
+            updateProperties(storageObject,getMetadata(Paths.get(storageObject.getKey())));
+            return storageObject;
+
+    }
     @Override
     public void updateProperties(StorageObject storageObject, Map<String, Object> metadataProperties) {
-
-        String path = storageObject.getPath();
+        String path = checkIsAndRenameDirectory(storageObject,metadataProperties,true).getPath();
         try {
             saveMetadata(Paths.get(path), metadataProperties);
         } catch (IOException e) {
@@ -247,32 +308,61 @@ public class FilesystemStorageDriver implements StorageDriver {
 
     @Override
     public String signDocuments(String json, String url) {
-        throw new NotImplementedException();
+        LOGGER.warn("FILESYSTEM -> Not yet implemented -> signDocuments");
+        return null;
     }
 
     @Override
     public void copyNode(StorageObject source, StorageObject target) {
-        throw new NotImplementedException();
+        try {
+            Path objectPathSource = absolutizePath(Paths.get(source.getKey()));
+            Path objectPathTarget = absolutizePath(Paths.get(target.getKey()));
+            if ( !Files.isDirectory(objectPathTarget) ) {
+                throw new StorageException( StorageException.Type.GENERIC, "Init: unable to copyNode the target " + target.getPath()+ " isn't a Directory");
+            }
+            if ( Files.isDirectory(objectPathSource) ){
+                throw new StorageException( StorageException.Type.GENERIC, "Init: unable to copyNode the source " + target.getPath() + " isn't a File");
+            }
+            Map<String, Object> metadataProperties = getMetadata(Paths.get(source.getPath()));
+
+            File file= new File(absolutizePath(Paths.get(source.getPath())).toString());
+            if ( objectPathSource.getParent().equals(objectPathTarget)){
+                //update document
+                updateDocument( source, file.getName());
+                return;
+
+            }
+            InputStream inputStream = new FileInputStream(file);
+            Files.copy(inputStream,
+                    absolutizePath(Paths.get(target.getPath().concat(SUFFIX).concat(( String)metadataProperties.get(StoragePropertyNames.NAME.value())))),
+                    StandardCopyOption.REPLACE_EXISTING);
+            inputStream.close();
+            saveMetadata(Paths.get(target.getPath().concat(SUFFIX).concat(file.getName())), metadataProperties);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public void managePermission(StorageObject storageObject, Map<String, ACLType> permission, boolean remove) {
-        throw new NotImplementedException();
+        LOGGER.warn("FILESYSTEM -> Not yet implemented");
     }
 
     @Override
     public void setInheritedPermission(StorageObject storageObject, Boolean inherited) {
-        throw new NotImplementedException();
+        LOGGER.warn("FILESYSTEM -> Not yet implemented");
     }
 
     @Override
     public List<StorageObject> getRelationship(String key, String relationshipName, boolean fromTarget) {
-        throw new NotImplementedException();
+        LOGGER.warn("FILESYSTEM -> Not yet implemented");
+        return Collections.emptyList();
     }
 
     @Override
     public void createRelationship(String source, String target, String relationshipName) {
-        throw new NotImplementedException();
+        LOGGER.warn("FILESYSTEM -> Not yet implemented");
     }
 
     @Override
