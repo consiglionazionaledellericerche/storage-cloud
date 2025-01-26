@@ -11,13 +11,14 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
+import java.io.*;
 import java.math.BigInteger;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static it.cnr.si.spring.storage.config.StoragePropertyNames.DESCRIPTION;
 import static it.cnr.si.spring.storage.config.StoragePropertyNames.TITLE;
@@ -146,6 +147,7 @@ public class FilesystemStorageTest {
 
         Map<String, Object> newProperties = new HashMap<>();
         newProperties.put("pluto", "paperino");
+        newProperties.put(StoragePropertyNames.NAME.value(), "TitoloNew");
         storeService.updateProperties(newProperties, so);
 
         so = storeService.getStorageObjectBykey(so.getKey());
@@ -244,8 +246,63 @@ public class FilesystemStorageTest {
                 new ByteArrayInputStream(file.getBytes()),
                 "text/plain",
                 "Titolo",
-                "/",
+                "/Comunicazioni da ISS/000.000/Contratti/2025/CONTRATTOTEST/",
                 true);
+    }
+    @Test
+    public void testUpdatePropertiesDirectory() {
+
+        String keyFolder ="\\Comunicazioni da ISS\\000.000\\Contratti\\2025\\Contratto 2025D000000011";
+        StorageObject so=storeService.getStorageObjectBykey( keyFolder);
+        so = storeService.getStorageObjectBykey(so.getKey());
+
+        assertNull(so.getPropertyValue("pluto"));
+
+        Map<String, Object> newProperties = new HashMap<>();
+
+        newProperties.put(StoragePropertyNames.NAME.value(), "Contratto 2025C000000011");
+        storeService.updateProperties(newProperties, so);
+
+        so = storeService.getStorageObjectBykey("\\Comunicazioni da ISS\\000.000\\Contratti\\2025\\Contratto 2025C000000011");
+
+        assertEquals("paperino", so.getPropertyValue("pluto"));
+
+
+    }
+
+    @Test
+    public void testFileProperties() {
+
+        File dir = new File("E:\\sigla\\Comunicazioni da ISS\\000.000\\Contratti\\2025\\Contratto 2025D000000011");
+        String rootFolder ="E:\\sigla\\\\Comunicazioni da ISS\\000.000\\Contratti\\2025\\Contratto 2025D000000011";
+        String keyFolder ="\\Comunicazioni da ISS\\000.000\\Contratti\\2025\\Contratto 2025D000000011";
+        List<String> pathStr = new ArrayList<>();
+        try (Stream<Path> paths = Files.walk(Paths.get(rootFolder))) {
+            pathStr = paths.filter(Files::isDirectory)
+                    .map(path -> path.toString())
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+
+        }
+        List<StorageObject> list=storeService.getChildren( keyFolder);
+        pathStr.stream().forEach(path->{
+            StorageObject soDir=storeService.getStorageObjectBykey(path);
+            List<StorageObject> listFiles  =storeService.getChildren( soDir.getKey());
+        });
+
+
+    }
+    @Test
+    public void copyNode() {
+
+        StorageObject source = storeService.getStorageObjectBykey("/Comunicazioni da ISS/000.000/Contratti/2025/Contratto 2025P000000012/CTR-000.000-2025P000000012.docuementi_ele_da_registrare.xlsx");
+        StorageObject target = new StorageObject(
+                "/Comunicazioni da ISS/000.000/Contratti/Passivo/Contratto/",
+                "/Comunicazioni da ISS/000.000/Contratti/Passivo/Contratto/",
+                null);
+        storeService.copyNode(source, target);
     }
 
 }
