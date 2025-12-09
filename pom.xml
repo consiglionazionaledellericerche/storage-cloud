@@ -21,7 +21,7 @@
     <name>Storage Cloud</name>
     <artifactId>storage-cloud</artifactId>
     <groupId>it.cnr.si.storage</groupId>
-    <version>3.0.1-SNAPSHOT</version>
+    <version>3.0.1</version>
     <packaging>pom</packaging>
     <parent>
         <artifactId>archetype</artifactId>
@@ -137,6 +137,6 @@
     <scm>
         <connection>scm:git:ssh://git@git.si.cnr.it/dev/storage-cloud.git</connection>
         <developerConnection>scm:git:ssh://git@git.si.cnr.it/dev/storage-cloud.git</developerConnection>
-        <tag>HEAD</tag>
+        <tag>3.0.1</tag>
     </scm>
 </project>
