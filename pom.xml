@@ -32,7 +32,7 @@
         <commons-io.version>2.7</commons-io.version>
         <junit.version>4.13.1</junit.version>
         <java.version>17</java.version>
-        <spring.version>6.0.0</spring.version>
+        <spring.version>6.2.7</spring.version>
         <slf4j.version>1.7.21</slf4j.version>
         <azure.tests.skip>true</azure.tests.skip>
         <cmis.tests.skip>true</cmis.tests.skip>
