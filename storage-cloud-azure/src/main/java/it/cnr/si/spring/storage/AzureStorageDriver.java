@@ -17,7 +17,6 @@
 
 package it.cnr.si.spring.storage;
 
-import com.microsoft.azure.storage.ResultSegment;
 import com.microsoft.azure.storage.blob.*;
 import it.cnr.si.spring.storage.config.AzureStorageConfigurationProperties;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
@@ -29,7 +28,6 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.swing.text.html.Option;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -186,7 +184,6 @@ public class AzureStorageDriver implements StorageDriver {
             blockBlobReference.uploadProperties();
             blockBlobReference.setMetadata(putUserMetadata(metadataProperties));
             blockBlobReference.uploadMetadata();
-
             return new StorageObject(key, key, getUserMetadata(blockBlobReference));
 
         } catch (URISyntaxException | IOException | com.microsoft.azure.storage.StorageException e) {

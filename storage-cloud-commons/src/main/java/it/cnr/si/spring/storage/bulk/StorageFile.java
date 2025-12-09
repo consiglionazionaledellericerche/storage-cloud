@@ -24,7 +24,7 @@ import it.cnr.si.spring.storage.annotation.StorageProperty;
 import it.cnr.si.spring.storage.annotation.StorageType;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
 
-import javax.activation.MimetypesFileTypeMap;
+import jakarta.activation.MimetypesFileTypeMap;
 import java.io.*;
 
 @StorageType(name = "cmis:document")

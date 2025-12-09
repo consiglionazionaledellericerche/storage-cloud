@@ -1,16 +1,11 @@
 package it.cnr.si.spring.storage;
 
-import it.cnr.si.spring.storage.annotation.StorageType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.DependsOn;
 import org.springframework.core.env.Environment;
 
-import javax.annotation.PostConstruct;
-import java.util.ArrayList;
+import jakarta.annotation.PostConstruct;
 import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Configuration
 public class StorageDriverConfigurationChecker {
