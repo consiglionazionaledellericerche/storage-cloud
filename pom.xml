@@ -21,7 +21,7 @@
     <name>Storage Cloud</name>
     <artifactId>storage-cloud</artifactId>
     <groupId>it.cnr.si.storage</groupId>
-    <version>2.0.25-SNAPSHOT</version>
+    <version>3.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <parent>
         <artifactId>archetype</artifactId>
