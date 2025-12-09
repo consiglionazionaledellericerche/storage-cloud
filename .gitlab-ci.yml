@@ -10,8 +10,7 @@ variables:
   MAVEN_OPTS: "-Djava.awt.headless=true -Dsonar.host.url=$SONAR_HOST_URL  --add-opens java.base/java.lang=ALL-UNNAMED"
   MAVEN_CLI_OPTS: "-s .m2/settings.xml
       -Dmaven.repo.local=./.m2/repository
-      -DskipTests
-      -Dcmis.tests.skip=false
+      -Dcmis.tests.skip=true
       -Dnexus.url=$NEXUS_URL
       -Dnexus.login=$NEXUS_USERNAME
       -Dnexus.pwd=$NEXUS_PASSWORD
