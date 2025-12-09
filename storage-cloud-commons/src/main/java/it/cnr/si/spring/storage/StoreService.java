@@ -184,7 +184,7 @@ public class StoreService {
     }
 
     public Boolean delete(String key) {
-        Assert.notNull(key);
+        Assert.notNull(key, "Key cannot be null");
         return storageDriver.delete(key);
     }
 
