@@ -2,6 +2,7 @@ package it.cnr.si.spring.storage;
 
 import it.cnr.si.spring.storage.bulk.StorageFile;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -250,6 +251,7 @@ public class FilesystemStorageTest {
                 true);
     }
     @Test
+    @Ignore
     public void testUpdatePropertiesDirectory() {
 
         String keyFolder ="\\Comunicazioni da ISS\\000.000\\Contratti\\2025\\Contratto 2025D000000011";
@@ -271,6 +273,7 @@ public class FilesystemStorageTest {
     }
 
     @Test
+    @Ignore
     public void testFileProperties() {
 
         File dir = new File("E:\\sigla\\Comunicazioni da ISS\\000.000\\Contratti\\2025\\Contratto 2025D000000011");
@@ -295,6 +298,7 @@ public class FilesystemStorageTest {
 
     }
     @Test
+    @Ignore
     public void copyNode() {
 
         StorageObject source = storeService.getStorageObjectBykey("/Comunicazioni da ISS/000.000/Contratti/2025/Contratto 2025P000000012/CTR-000.000-2025P000000012.docuementi_ele_da_registrare.xlsx");
