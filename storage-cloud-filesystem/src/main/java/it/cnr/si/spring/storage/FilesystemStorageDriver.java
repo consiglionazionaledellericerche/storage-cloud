@@ -203,12 +203,12 @@ public class FilesystemStorageDriver implements StorageDriver {
 
     @Override
     public InputStream getInputStream(String key, String versionId) {
-        throw new RuntimeException();
+        throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     @Override
     public InputStream getInputStream(String key, Boolean majorVersion) {
-        throw new RuntimeException();
+        throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     @Override
@@ -256,7 +256,7 @@ public class FilesystemStorageDriver implements StorageDriver {
 
     @Override
     public StorageObject getObject(String id, UsernamePasswordCredentials customCredentials) {
-        throw new RuntimeException();
+        throw new UnsupportedOperationException("Not implemented yet.");
     }
 
     @Override
