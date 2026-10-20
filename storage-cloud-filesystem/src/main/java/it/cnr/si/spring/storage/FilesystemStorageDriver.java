@@ -8,9 +8,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Service;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.io.*;
 import java.math.BigInteger;
 import java.nio.file.*;
@@ -204,12 +203,12 @@ public class FilesystemStorageDriver implements StorageDriver {
 
     @Override
     public InputStream getInputStream(String key, String versionId) {
-        throw new NotImplementedException();
+        throw new RuntimeException();
     }
 
     @Override
     public InputStream getInputStream(String key, Boolean majorVersion) {
-        throw new NotImplementedException();
+        throw new RuntimeException();
     }
 
     @Override
@@ -257,7 +256,7 @@ public class FilesystemStorageDriver implements StorageDriver {
 
     @Override
     public StorageObject getObject(String id, UsernamePasswordCredentials customCredentials) {
-        throw new NotImplementedException();
+        throw new RuntimeException();
     }
 
     @Override

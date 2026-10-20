@@ -18,21 +18,22 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
+    <name>Storage Cloud</name>
     <artifactId>storage-cloud</artifactId>
     <groupId>it.cnr.si.storage</groupId>
-    <version>2.0.24-SNAPSHOT</version>
+    <version>3.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <parent>
         <artifactId>archetype</artifactId>
         <groupId>it.cnr.si</groupId>
-        <version>1.0.15</version>
+        <version>1.2.0</version>
     </parent>
     <properties>
         <sonar.skip>true</sonar.skip>
         <commons-io.version>2.7</commons-io.version>
         <junit.version>4.13.1</junit.version>
-        <java.version>1.8</java.version>
-        <spring.version>5.1.8.RELEASE</spring.version>
+        <java.version>17</java.version>
+        <spring.version>6.2.7</spring.version>
         <slf4j.version>1.7.21</slf4j.version>
         <azure.tests.skip>true</azure.tests.skip>
         <cmis.tests.skip>true</cmis.tests.skip>
@@ -45,6 +46,58 @@
         <module>storage-cloud-azure</module>
         <module>storage-cloud-filesystem</module>
     </modules>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>4.0.0.4121</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.6.3</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <doclint>none</doclint>
+                    <quiet>true</quiet>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.11</version> <!-- Latest as of 2025 -->
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <source>${java.version}</source>
+                        <target>${java.version}</target>
+                        <encoding>${project.build.sourceEncoding}</encoding>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
     <licenses>
         <license>
             <name>GNU AFFERO GENERAL PUBLIC LICENSE</name>

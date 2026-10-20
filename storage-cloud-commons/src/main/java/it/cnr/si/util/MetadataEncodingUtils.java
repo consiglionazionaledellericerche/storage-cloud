@@ -152,7 +152,7 @@ public class MetadataEncodingUtils {
      * @return decoded metadata key
      */
     public static String decodeKey(String input) {
-        Assert.isTrue(input.startsWith(PREFIX));
+        Assert.isTrue(input.startsWith(PREFIX), String.format("Input %s not start width %s", input, PREFIX));
         String suffix = input.replaceFirst(PREFIX, "");
         try {
             String output = new String(Base64.getDecoder().decode(suffix), UTF_8);
