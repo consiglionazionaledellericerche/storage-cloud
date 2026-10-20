@@ -31,7 +31,7 @@ cache:
 
 maven-deploy:
   stage: deploy
-  image: maven:3.6.3-openjdk-17
+  image: maven:3.6.3-openjdk-21
   script:
     - mvn clean deploy $MAVEN_CLI_OPTS -Pprod
   only:
@@ -41,7 +41,7 @@ maven-deploy:
 
 maven-install:
   stage: deploy
-  image: maven:3.6.3-openjdk-17
+  image: maven:3.6.3-openjdk-21
   script:
     - mvn clean deploy $MAVEN_CLI_OPTS
   except:
@@ -51,7 +51,7 @@ maven-install:
 #la release è opzionale e manuale.
 Perform Maven Release:
   stage: release
-  image: maven:3.6.3-openjdk-17
+  image: maven:3.6.3-openjdk-21
   script:
     # Install git if missing
     - 'command -v git || (apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*)'
@@ -87,4 +87,3 @@ Perform Maven Release:
   only:
     - master
   when: manual
-  
