@@ -17,7 +17,6 @@
 
 package it.cnr.si.spring.storage;
 
-import com.microsoft.azure.storage.blob.CloudBlobDirectory;
 import it.cnr.si.spring.storage.config.StoragePropertyNames;
 import org.apache.commons.io.IOUtils;
 import org.junit.Test;
@@ -29,7 +28,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.*;
 
