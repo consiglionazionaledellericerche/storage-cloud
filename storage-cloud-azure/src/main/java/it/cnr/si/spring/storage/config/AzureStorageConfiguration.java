@@ -1,26 +1,9 @@
-/*
- * Copyright (C) 2019  Consiglio Nazionale delle Ricerche
- *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU Affero General Public License as
- *     published by the Free Software Foundation, either version 3 of the
- *     License, or (at your option) any later version.
- *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU Affero General Public License for more details.
- *
- *     You should have received a copy of the GNU Affero General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
 package it.cnr.si.spring.storage.config;
 
-import com.microsoft.azure.storage.CloudStorageAccount;
-import com.microsoft.azure.storage.StorageCredentials;
-import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.models.BlobStorageException;
 import it.cnr.si.spring.storage.AzureStorageDriver;
 import it.cnr.si.spring.storage.condition.StorageDriverIsAzure;
 import org.slf4j.Logger;
@@ -29,9 +12,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 
-import java.net.URISyntaxException;
-import java.security.InvalidKeyException;
-
 /**
  * Created by mspasiano on 6/5/17.
  */
@@ -39,39 +19,70 @@ import java.security.InvalidKeyException;
 @Conditional({StorageDriverIsAzure.class})
 public class AzureStorageConfiguration {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AzureStorageConfiguration.class);
-
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(AzureStorageConfiguration.class);
 
     @Bean
-    public CloudStorageAccount cloudBlobContainer(AzureStorageConfigurationProperties azureStorageConfigurationProperties) {
+    public BlobServiceClient blobServiceClient(
+            AzureStorageConfigurationProperties azureStorageConfigurationProperties) {
 
-        String connectionString = azureStorageConfigurationProperties.getConnectionString();
-        LOGGER.info("connectionString = {}", connectionString);
+        String connectionString =
+                azureStorageConfigurationProperties.getConnectionString();
+
         try {
-            StorageCredentials credentials = StorageCredentials
-                    .tryParseCredentials(connectionString);
-            return new CloudStorageAccount(credentials);
-        } catch (InvalidKeyException | StorageException | URISyntaxException e) {
-            String msg = "cannot get reference to blob container ";
-            throw new it.cnr.si.spring.storage.StorageException(it.cnr.si.spring.storage.StorageException.Type.GENERIC, new RuntimeException(msg, e));
+            return new BlobServiceClientBuilder()
+                    .connectionString(connectionString)
+                    .buildClient();
+
+        } catch (RuntimeException e) {
+            String msg =
+                    "Cannot create Azure BlobServiceClient";
+
+            throw new it.cnr.si.spring.storage.StorageException(
+                    it.cnr.si.spring.storage.StorageException.Type.GENERIC,
+                    new RuntimeException(msg, e)
+            );
         }
     }
 
-
     @Bean
-    public AzureStorageDriver azureBlobStorageService(CloudStorageAccount cloudStorageAccount,
-                                                      AzureStorageConfigurationProperties azureStorageConfigurationProperties) {
-        String containerName = azureStorageConfigurationProperties.getContainerName();
+    public BlobContainerClient blobContainerClient(
+            BlobServiceClient blobServiceClient,
+            AzureStorageConfigurationProperties azureStorageConfigurationProperties) {
+
+        String containerName =
+                azureStorageConfigurationProperties.getContainerName();
+
         LOGGER.info("container = {}", containerName);
+
         try {
-            CloudBlobContainer container = cloudStorageAccount.createCloudBlobClient().getContainerReference(containerName);
-            container.createIfNotExists();
-            return new AzureStorageDriver(container, azureStorageConfigurationProperties);
-        } catch (StorageException | URISyntaxException e) {
-            String msg = "cannot get reference to blob container " + containerName;
-            throw new it.cnr.si.spring.storage.StorageException(it.cnr.si.spring.storage.StorageException.Type.GENERIC, new RuntimeException(msg, e));
+            BlobContainerClient containerClient =
+                    blobServiceClient.getBlobContainerClient(containerName);
+
+            containerClient.createIfNotExists();
+
+            return containerClient;
+
+        } catch (BlobStorageException e) {
+            String msg =
+                    "Cannot get reference to blob container "
+                            + containerName;
+
+            throw new it.cnr.si.spring.storage.StorageException(
+                    it.cnr.si.spring.storage.StorageException.Type.GENERIC,
+                    new RuntimeException(msg, e)
+            );
         }
     }
 
+    @Bean
+    public AzureStorageDriver azureBlobStorageService(
+            BlobContainerClient blobContainerClient,
+            AzureStorageConfigurationProperties azureStorageConfigurationProperties) {
 
+        return new AzureStorageDriver(
+                blobContainerClient,
+                azureStorageConfigurationProperties
+        );
+    }
 }
